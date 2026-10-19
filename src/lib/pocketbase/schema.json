@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T20:24:15.271Z",
+  "generatedAt": "2026-10-19T20:42:00.468Z",
   "collections": [
     {
       "name": "users",
@@ -198,6 +198,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "aiVerdict",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["aprovado", "duvidoso", "reprovado"]
         }
       ],
       "indexes": [
