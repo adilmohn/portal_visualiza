@@ -2,6 +2,7 @@ import pb from '@/lib/pocketbase/client'
 
 export type ListingType = 'empresa' | 'negocio' | 'solucao' | 'produto'
 export type ListingStatus = 'pendente' | 'aprovado' | 'rejeitado' | 'inativo'
+export type AiVerdict = 'aprovado' | 'duvidoso' | 'reprovado'
 
 export interface ListingItem {
   id: string
@@ -22,6 +23,8 @@ export interface ListingItem {
   neighborhood?: string
   status: ListingStatus
   rejectedReason?: string
+  aiVerdict?: AiVerdict
+  aiReason?: string
   pinEnabled?: boolean
   pinLat?: number
   pinLng?: number
@@ -172,6 +175,13 @@ export async function searchListings(
             status: (rec.getStringValue('status') ||
               (rec as unknown as { status?: ListingStatus }).status ||
               'aprovado') as ListingStatus,
+            aiVerdict:
+              (rec.getStringValue('aiVerdict') as AiVerdict) ||
+              ((rec as unknown as { aiVerdict?: AiVerdict }).aiVerdict ?? undefined),
+            rejectedReason:
+              rec.getStringValue('rejectedReason') ||
+              (rec as unknown as { rejectedReason?: string }).rejectedReason ||
+              undefined,
             pinEnabled:
               rec.getBoolValue?.('pinEnabled') ??
               (rec as unknown as { pinEnabled?: boolean }).pinEnabled,

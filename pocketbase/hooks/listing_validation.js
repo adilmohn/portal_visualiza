@@ -98,14 +98,27 @@ routerAdd('POST', '/backend/v1/validation', (e) => {
     let verdict = 'duvidoso'
     let reason = 'Serviço de IA indisponível, revisão humana necessária'
 
+    // Resolve user ID for native agent chat requirement
+    let agentUserId = (e.auth && e.auth.id) || listing.getString('userId')
+    if (!agentUserId) {
+      try {
+        const adminUser = $app.findAuthRecordByEmail('_pb_users_auth_', 'cadastro@inovacore.com.br')
+        if (adminUser) agentUserId = adminUser.id
+      } catch (_) {}
+    }
+
     // AI Call with timeout handling, retry once on 503 after 2s, NO retry on 400 or 401
     const runAi = () => {
       // Native agent first
       try {
         if (typeof $ai !== 'undefined' && typeof $ai.agent === 'function') {
-          const agentRes = $ai.agent('listing-validator').chat({
+          const chatParams = {
             message: userPrompt,
-          })
+          }
+          if (agentUserId) {
+            chatParams.user_id = agentUserId
+          }
+          const agentRes = $ai.agent('listing-validator').chat(chatParams)
           if (agentRes && agentRes.content) {
             return agentRes.content
           }

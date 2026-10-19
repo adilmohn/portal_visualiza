@@ -1,5 +1,5 @@
 import pb from '@/lib/pocketbase/client'
-import type { ListingItem, ListingType, ListingStatus } from '@/services/listings'
+import type { ListingItem, ListingType, ListingStatus, AiVerdict } from '@/services/listings'
 import type { ListingPhoto } from '@/services/listing-detail'
 
 export type AdminActionType = 'approve' | 'reject' | 'deactivate'
@@ -7,6 +7,8 @@ export type AdminActionType = 'approve' | 'reject' | 'deactivate'
 export interface AdminListingItem extends ListingItem {
   userId: string
   rejectedReason?: string
+  aiVerdict?: AiVerdict
+  aiReason?: string
   photos: ListingPhoto[]
 }
 
@@ -79,6 +81,8 @@ function mapRecordToAdminListing(
     neighborhood: getString('neighborhood') || undefined,
     status: (getString('status') || 'pendente') as ListingStatus,
     rejectedReason: getString('rejectedReason') || undefined,
+    aiVerdict: (getString('aiVerdict') as AiVerdict) || undefined,
+    aiReason: getString('rejectedReason') || undefined,
     pinEnabled: getBool('pinEnabled'),
     pinLat: getNumber('pinLat'),
     pinLng: getNumber('pinLng'),
@@ -144,6 +148,30 @@ export async function getPendingListings(): Promise<AdminListingItem[]> {
   return records.map((r) =>
     mapRecordToAdminListing(r as unknown as Record<string, unknown>, photoMap.get(r.id) || []),
   )
+}
+
+/**
+ * Triggers or requests AI validation for a listing via POST /backend/v1/validation
+ */
+export async function validateListingWithAi(listingId: string): Promise<{
+  success: boolean
+  listingId: string
+  verdict: AiVerdict
+  reason: string
+}> {
+  if (!listingId) throw new Error('ID do anúncio é obrigatório.')
+
+  const res = await pb.send<{
+    success: boolean
+    listingId: string
+    verdict: AiVerdict
+    reason: string
+  }>('/backend/v1/validation', {
+    method: 'POST',
+    body: { listingId },
+  })
+
+  return res
 }
 
 /**

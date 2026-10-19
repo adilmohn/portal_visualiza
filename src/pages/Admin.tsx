@@ -21,6 +21,8 @@ import {
   History,
   ExternalLink,
   ShieldAlert,
+  Sparkles,
+  AlertTriangle,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -413,6 +415,41 @@ export default function Admin() {
                             >
                               Pendente
                             </Badge>
+
+                            {/* Badge do Veredito da IA */}
+                            {item.aiVerdict === 'duvidoso' ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500 shadow-sm animate-pulse flex items-center gap-1"
+                              >
+                                <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                                <span>IA: Duvidoso</span>
+                              </Badge>
+                            ) : item.aiVerdict === 'aprovado' ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-400 flex items-center gap-1"
+                              >
+                                <Sparkles className="h-3 w-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span>IA: Aprovado</span>
+                              </Badge>
+                            ) : item.aiVerdict === 'reprovado' ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-400 flex items-center gap-1"
+                              >
+                                <XCircle className="h-3 w-3 text-rose-600 dark:text-rose-400 shrink-0" />
+                                <span>IA: Reprovado</span>
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-xs text-muted-foreground border-border/80 flex items-center gap-1"
+                              >
+                                <Sparkles className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                                <span>IA: Em análise</span>
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5" />
@@ -491,6 +528,43 @@ export default function Admin() {
 
                         {/* Description & Fields */}
                         <div className="md:col-span-3 space-y-3">
+                          {/* Destaque para motivo da análise de IA */}
+                          {item.aiVerdict && (
+                            <div
+                              className={`p-2.5 rounded-lg border text-xs leading-relaxed flex items-start gap-2 ${
+                                item.aiVerdict === 'duvidoso'
+                                  ? 'bg-amber-500/10 border-amber-300 text-amber-900 dark:text-amber-200 dark:border-amber-800'
+                                  : item.aiVerdict === 'reprovado'
+                                    ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-800'
+                                    : 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
+                              }`}
+                            >
+                              {item.aiVerdict === 'duvidoso' ? (
+                                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                              ) : item.aiVerdict === 'reprovado' ? (
+                                <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                              ) : (
+                                <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                              )}
+                              <div>
+                                <span className="font-semibold mr-1.5">
+                                  {item.aiVerdict === 'duvidoso'
+                                    ? 'Atenção IA (Revisão Humana Recomendada):'
+                                    : item.aiVerdict === 'reprovado'
+                                      ? 'Alerta da IA:'
+                                      : 'Parecer da IA:'}
+                                </span>
+                                <span>
+                                  {item.aiReason ||
+                                    item.rejectedReason ||
+                                    (item.aiVerdict === 'aprovado'
+                                      ? 'Anúncio em conformidade com as diretrizes do portal.'
+                                      : 'Verificação pendente.')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
                           <div>
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Descrição:
@@ -1200,7 +1274,40 @@ export default function Admin() {
                 </div>
               </div>
 
-              {previewTarget.rejectedReason && (
+              {/* AI Verdict & Reason in Preview Dialog */}
+              {previewTarget.aiVerdict && (
+                <div
+                  className={`p-3 rounded-lg border text-xs leading-relaxed space-y-1 ${
+                    previewTarget.aiVerdict === 'duvidoso'
+                      ? 'bg-amber-500/10 border-amber-300 text-amber-900 dark:text-amber-200 dark:border-amber-800'
+                      : previewTarget.aiVerdict === 'reprovado'
+                        ? 'bg-rose-50 border-rose-200 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-800'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    {previewTarget.aiVerdict === 'duvidoso' ? (
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    ) : previewTarget.aiVerdict === 'reprovado' ? (
+                      <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    )}
+                    <span>
+                      Veredito da IA:{' '}
+                      <strong className="capitalize">{previewTarget.aiVerdict}</strong>
+                    </span>
+                  </div>
+                  {(previewTarget.aiReason || previewTarget.rejectedReason) && (
+                    <p className="pl-5">
+                      <strong>Motivo:</strong>{' '}
+                      {previewTarget.aiReason || previewTarget.rejectedReason}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {previewTarget.rejectedReason && previewTarget.aiVerdict !== 'reprovado' && (
                 <div className="p-3 rounded-lg bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200 border border-rose-200 dark:border-rose-800 text-xs">
                   <strong>Motivo de rejeição anterior:</strong> {previewTarget.rejectedReason}
                 </div>
