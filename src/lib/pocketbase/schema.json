@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T19:58:05.167Z",
+  "generatedAt": "2026-10-19T20:16:47.582Z",
   "collections": [
     {
       "name": "users",
@@ -536,6 +536,64 @@
         "CREATE INDEX idx_sales_packageId ON sales (packageId)",
         "CREATE INDEX idx_sales_status ON sales (status)",
         "CREATE INDEX idx_sales_startDate ON sales (startDate)"
+      ]
+    },
+    {
+      "name": "vouchers",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id) || (used = false && listingId.status = \"aprovado\")",
+        "view": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id) || (used = false && listingId.status = \"aprovado\")",
+        "create": null,
+        "update": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "delete": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "code",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "promotionId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "promotions"
+        },
+        {
+          "name": "listingId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "listings"
+        },
+        {
+          "name": "used",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_vouchers_code ON vouchers (code)",
+        "CREATE INDEX idx_vouchers_listingId ON vouchers (listingId)",
+        "CREATE INDEX idx_vouchers_promotionId ON vouchers (promotionId)"
       ]
     }
   ]

@@ -14,6 +14,7 @@ export interface ListingPromotion {
   description: string
   active: boolean
   created: string
+  voucherCode?: string | null
 }
 
 export interface ListingDetail {
@@ -127,13 +128,35 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
         photos = []
       }
 
-      // Fetch active promotions
+      // Fetch active promotions and vouchers
       let promotions: ListingPromotion[] = []
       try {
         const promoList = await pb.collection('promotions').getFullList({
           filter: `listingId = '${cleanId}' && active = true`,
           sort: '-created',
         })
+
+        // Fetch active vouchers for this listing
+        let vouchersMap: Record<string, string> = {}
+        try {
+          const voucherList = await pb.collection('vouchers').getFullList({
+            filter: `listingId = '${cleanId}' && used = false`,
+            sort: '-created',
+          })
+          for (const v of voucherList) {
+            const promoId =
+              v.getStringValue('promotionId') ||
+              (v as unknown as { promotionId?: string }).promotionId ||
+              ''
+            const code = v.getStringValue('code') || (v as unknown as { code?: string }).code || ''
+            if (promoId && code && !vouchersMap[promoId]) {
+              vouchersMap[promoId] = code
+            }
+          }
+        } catch (_) {
+          vouchersMap = {}
+        }
+
         promotions = promoList.map((pr) => ({
           id: pr.id,
           title: pr.getStringValue('title') || (pr as unknown as { title?: string }).title || '',
@@ -144,6 +167,7 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
           active:
             pr.getBoolValue?.('active') ?? (pr as unknown as { active?: boolean }).active ?? true,
           created: pr.created,
+          voucherCode: vouchersMap[pr.id] || null,
         }))
       } catch (_) {
         promotions = []

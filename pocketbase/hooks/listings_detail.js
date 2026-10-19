@@ -55,7 +55,7 @@ routerAdd('GET', '/backend/v1/listings/detail', (e) => {
       photos = []
     }
 
-    // Fetch active promotions (order by created DESC)
+    // Fetch active promotions (order by created DESC) and attach active unused voucher if available
     let promotions = []
     try {
       const promoRecords = $app.findRecordsByFilter(
@@ -65,13 +65,32 @@ routerAdd('GET', '/backend/v1/listings/detail', (e) => {
         50,
         0,
       )
-      promotions = promoRecords.map((pr) => ({
-        id: pr.id,
-        title: pr.getString('title'),
-        description: pr.getString('description'),
-        active: pr.getBool('active'),
-        created: pr.getString('created'),
-      }))
+      promotions = promoRecords.map((pr) => {
+        let voucherCode = null
+        try {
+          const voucherRecords = $app.findRecordsByFilter(
+            'vouchers',
+            `promotionId = '${pr.id}' && used = false`,
+            '-created',
+            1,
+            0,
+          )
+          if (voucherRecords && voucherRecords.length > 0) {
+            voucherCode = voucherRecords[0].getString('code')
+          }
+        } catch (_) {
+          voucherCode = null
+        }
+
+        return {
+          id: pr.id,
+          title: pr.getString('title'),
+          description: pr.getString('description'),
+          active: pr.getBool('active'),
+          created: pr.getString('created'),
+          voucherCode: voucherCode,
+        }
+      })
     } catch (_) {
       promotions = []
     }

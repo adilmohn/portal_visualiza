@@ -21,6 +21,9 @@ import {
   AlertCircle,
   HelpCircle,
   MessageCircle,
+  Ticket,
+  Copy,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -218,6 +221,36 @@ export default function Detalhe() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: listing, isLoading, isNotFound, isError, refetch } = useListingDetail(id)
+  const [copiedVoucher, setCopiedVoucher] = useState<string | null>(null)
+
+  const handleCopyVoucher = useCallback(async (code: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(code)
+      } else {
+        const textArea = document.createElement('textarea')
+        textArea.value = code
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+      setCopiedVoucher(code)
+      toast({
+        title: 'Código copiado!',
+        description: `O voucher ${code} foi copiado para sua área de transferência.`,
+      })
+      setTimeout(() => {
+        setCopiedVoucher((prev) => (prev === code ? null : prev))
+      }, 2500)
+    } catch (_) {
+      toast({
+        title: 'Erro ao copiar',
+        description: 'Não foi possível copiar o código do voucher.',
+        variant: 'destructive',
+      })
+    }
+  }, [])
 
   // Track contact event and dispatch link
   const handleContactClick = useCallback(
@@ -606,10 +639,47 @@ export default function Detalhe() {
                         </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-3">
                       <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                         {promo.description}
                       </p>
+
+                      {promo.voucherCode && (
+                        <div className="pt-3 border-t border-amber-200/60 dark:border-amber-900/40 flex flex-wrap items-center justify-between gap-3 bg-amber-500/10 -mx-6 -mb-6 p-4 rounded-b-xl">
+                          <div className="flex items-center gap-2">
+                            <Ticket className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <div>
+                              <span className="text-xs font-semibold text-muted-foreground block">
+                                Voucher Promocional
+                              </span>
+                              <span className="font-mono text-base font-bold text-foreground tracking-wider">
+                                {promo.voucherCode}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleCopyVoucher(promo.voucherCode!)}
+                            className="min-h-[44px] gap-2 font-medium bg-background hover:bg-muted text-foreground border shadow-xs"
+                            aria-label={`Copiar código ${promo.voucherCode}`}
+                          >
+                            {copiedVoucher === promo.voucherCode ? (
+                              <>
+                                <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                <span>Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4" />
+                                <span>Copiar código</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
