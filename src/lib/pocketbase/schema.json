@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-10-19T18:26:45.673Z",
+  "generatedAt": "2026-10-19T18:34:41.079Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id",
+        "list": null,
         "view": "id = @request.auth.id",
         "create": "",
-        "update": "id = @request.auth.id",
-        "delete": "id = @request.auth.id"
+        "update": "id = @request.auth.id && @request.body.role:changed = false",
+        "delete": null
       },
       "fields": [
         {
@@ -37,12 +37,304 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["cadastrado", "anunciante", "admin"]
         }
       ],
       "indexes": [
         "CREATE UNIQUE INDEX `idx_tokenKey__pb_users_auth_` ON `users` (`tokenKey`)",
         "CREATE UNIQUE INDEX `idx_email__pb_users_auth_` ON `users` (`email`) WHERE `email` != ''"
       ]
+    },
+    {
+      "name": "listings",
+      "type": "base",
+      "apiRules": {
+        "list": "status = \"aprovado\" || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && userId = @request.auth.id)",
+        "view": "status = \"aprovado\" || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && userId = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && userId = @request.auth.id",
+        "update": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && userId = @request.auth.id)",
+        "delete": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && userId = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "userId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["empresa", "negocio", "solucao", "produto"]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "email",
+          "type": "email",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "whatsapp",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "website",
+          "type": "url",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "cep",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "state",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "country",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "zone",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "neighborhood",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pendente", "aprovado", "rejeitado", "inativo"]
+        },
+        {
+          "name": "pinEnabled",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pinLat",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "pinLng",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_listings_city ON listings (city)",
+        "CREATE INDEX idx_listings_state ON listings (state)",
+        "CREATE INDEX idx_listings_type ON listings (type)"
+      ]
+    },
+    {
+      "name": "photos",
+      "type": "base",
+      "apiRules": {
+        "list": "listingId.status = \"aprovado\" || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "view": "listingId.status = \"aprovado\" || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (listingId.userId = @request.auth.id || @request.auth.role = \"admin\")",
+        "update": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "delete": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "listingId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "listings"
+        },
+        {
+          "name": "url",
+          "type": "file",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "contactEvents",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "listingId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "listings"
+        },
+        {
+          "name": "channel",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["whatsapp", "telefone", "email", "site"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "promotions",
+      "type": "base",
+      "apiRules": {
+        "list": "(listingId.status = \"aprovado\" && active = true) || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "view": "(listingId.status = \"aprovado\" && active = true) || @request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "create": "@request.auth.id != \"\" && (listingId.userId = @request.auth.id || @request.auth.role = \"admin\")",
+        "update": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)",
+        "delete": "@request.auth.role = \"admin\" || (@request.auth.id != \"\" && listingId.userId = @request.auth.id)"
+      },
+      "fields": [
+        {
+          "name": "listingId",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "listings"
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "active",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
     }
   ]
 }

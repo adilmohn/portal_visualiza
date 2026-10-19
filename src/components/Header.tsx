@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Sun, Moon, LogIn } from 'lucide-react'
+import { Sun, Moon, LogIn, LogOut, ShieldCheck, User } from 'lucide-react'
 import { useTheme } from '@/hooks/use-theme'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 
 export function Header() {
   const { theme, toggleTheme } = useTheme()
+  const { user, isAuthenticated, signOut, role } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
@@ -71,6 +73,19 @@ export function Header() {
           >
             Minha Área
           </NavLink>
+          {role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `transition-colors hover:text-foreground flex items-center gap-1 ${
+                  isActive ? 'text-primary font-semibold' : ''
+                }`
+              }
+            >
+              <ShieldCheck className="h-4 w-4" />
+              <span>Admin</span>
+            </NavLink>
+          )}
           <NavLink
             to="/sobre"
             className={({ isActive }) =>
@@ -83,7 +98,7 @@ export function Header() {
           </NavLink>
         </nav>
 
-        {/* Right: Dark mode toggle + "Entrar" button */}
+        {/* Right: Dark mode toggle + Auth buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Button
             type="button"
@@ -104,15 +119,42 @@ export function Header() {
             />
           </Button>
 
-          <Button
-            asChild
-            className="h-9 px-4 sm:px-5 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Link to="/cadastro" className="inline-flex items-center gap-1.5">
-              <LogIn className="h-4 w-4" aria-hidden="true" />
-              <span>Entrar</span>
-            </Link>
-          </Button>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="hidden sm:inline-flex h-9 gap-1.5 text-xs font-medium"
+              >
+                <Link to="/area">
+                  <User className="h-3.5 w-3.5 text-primary" />
+                  <span className="max-w-[100px] truncate">{user?.name || user?.email}</span>
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={signOut}
+                title="Sair da conta"
+                className="h-9 px-2.5 text-muted-foreground hover:text-destructive gap-1 text-xs"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              asChild
+              className="h-9 px-4 sm:px-5 font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Link to="/login" className="inline-flex items-center gap-1.5">
+                <LogIn className="h-4 w-4" aria-hidden="true" />
+                <span>Entrar</span>
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
     </header>
