@@ -21,6 +21,7 @@ const Sobre = lazy(() => import('@/pages/Sobre'))
 const Privacidade = lazy(() => import('@/pages/Privacidade'))
 const Termos = lazy(() => import('@/pages/Termos'))
 const Contato = lazy(() => import('@/pages/Contato'))
+const Detalhe = lazy(() => import('@/pages/Detalhe'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 export default function App() {
@@ -37,6 +38,7 @@ export default function App() {
                   <Route element={<Layout />}>
                     <Route path="/" element={<Home />} />
                     <Route path="/diretorio" element={<Diretorio />} />
+                    <Route path="/detalhe/:id" element={<Detalhe />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/cadastro" element={<Cadastro />} />
                     <Route path="/sobre" element={<Sobre />} />
