@@ -38,9 +38,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Coins } from 'lucide-react'
+import { Coins, Star, MessageSquare } from 'lucide-react'
 import { useAdminQueue } from '@/hooks/use-admin-queue'
 import { useAdminMetrics } from '@/hooks/use-admin-metrics'
+import { useAdminReviews } from '@/hooks/use-admin-reviews'
 import { AdminMonetization } from '@/components/admin/AdminMonetization'
 import type { AdminListingItem } from '@/services/admin'
 
@@ -68,6 +69,16 @@ export default function Admin() {
     isLoading: isLoadingMetrics,
     refetch: refetchMetrics,
   } = useAdminMetrics()
+
+  const {
+    pendingReviews,
+    isLoading: isLoadingReviews,
+    isActionLoading: isReviewActionLoading,
+    actionReviewId,
+    refetch: refetchReviews,
+    handleApprove: handleApproveReview,
+    handleReject: handleRejectReview,
+  } = useAdminReviews()
 
   // State for Rejection Modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
@@ -173,6 +184,7 @@ export default function Admin() {
             refetchPending()
             refetchApproved(approvedPage, searchTerm)
             refetchMetrics()
+            refetchReviews()
           }}
           className="gap-2 h-11 sm:h-9 min-h-[44px] sm:min-h-0 text-muted-foreground hover:text-foreground focus-visible:ring-2"
           aria-label="Atualizar todos os dados"
@@ -279,17 +291,29 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Tabs: Fila de Moderação, Anúncios Aprovados, Auditoria, Monetização */}
+      {/* Tabs: Fila de Moderação, Avaliações, Anúncios Aprovados, Monetização, Auditoria */}
       <Tabs defaultValue="queue" className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-4 max-w-2xl h-auto sm:h-12 p-1 bg-muted gap-1">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-5 max-w-3xl h-auto sm:h-12 p-1 bg-muted gap-1">
           <TabsTrigger
             value="queue"
             className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
           >
-            <span>Fila Pendente</span>
+            <span>Fila Anúncios</span>
             {pendingListings.length > 0 && (
               <Badge variant="destructive" className="px-1.5 py-0 text-[10px] rounded-full">
                 {pendingListings.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger
+            value="reviews"
+            className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
+          >
+            <Star className="h-3.5 w-3.5" />
+            <span>Avaliações</span>
+            {pendingReviews.length > 0 && (
+              <Badge variant="destructive" className="px-1.5 py-0 text-[10px] rounded-full">
+                {pendingReviews.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -515,6 +539,164 @@ export default function Admin() {
                             )}
                           </div>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB: REVIEWS MODERATION QUEUE */}
+        <TabsContent value="reviews" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                    <span>Fila de Moderação de Avaliações</span>
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-amber-300 text-amber-700 dark:text-amber-400"
+                    >
+                      Atualização em tempo real ativa
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    Avaliações enviadas por usuários que aguardam aprovação para exibição pública na
+                    página do anúncio.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isLoadingReviews ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="p-4 rounded-xl border border-border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-5 w-48" />
+                        <Skeleton className="h-5 w-24" />
+                      </div>
+                      <Skeleton className="h-10 w-full" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-9 w-24" />
+                        <Skeleton className="h-9 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : pendingReviews.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-12 text-center space-y-3">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6" />
+                  </div>
+                  <h3 className="font-semibold text-foreground text-base">
+                    Nenhuma avaliação pendente
+                  </h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                    Todas as avaliações submetidas por usuários já foram moderadas pela equipe.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingReviews.map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="p-5 rounded-xl border border-border/80 bg-card hover:border-border transition-colors space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-base text-foreground">
+                              {rev.listingName || 'Anúncio'}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-300"
+                            >
+                              Pendente
+                            </Badge>
+                            <div className="flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`h-3 w-3 ${
+                                    s <= rev.stars
+                                      ? 'text-amber-500 fill-amber-500'
+                                      : 'text-muted-foreground/30'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              ))}
+                              <span className="text-xs font-bold text-amber-600 ml-1">
+                                {rev.stars}/5
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span>
+                              Avaliador: <strong>{rev.userName}</strong>
+                            </span>
+                            {rev.userEmail && <span>({rev.userEmail})</span>}
+                            <span>
+                              • Enviado em {new Date(rev.created).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Botões Aprovar e Rejeitar */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRejectReview(rev.id)}
+                            disabled={isReviewActionLoading && actionReviewId === rev.id}
+                            className="min-h-[44px] sm:min-h-[36px] gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2"
+                            aria-label={`Rejeitar avaliação de ${rev.userName}`}
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span>
+                              {isReviewActionLoading && actionReviewId === rev.id
+                                ? 'Rejeitando...'
+                                : 'Rejeitar'}
+                            </span>
+                          </Button>
+
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleApproveReview(rev.id)}
+                            disabled={isReviewActionLoading && actionReviewId === rev.id}
+                            className="min-h-[44px] sm:min-h-[36px] gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white focus-visible:ring-2"
+                            aria-label={`Aprovar avaliação de ${rev.userName}`}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            <span>
+                              {isReviewActionLoading && actionReviewId === rev.id
+                                ? 'Aprovando...'
+                                : 'Aprovar'}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Review Comment */}
+                      <div className="pt-2 border-t border-border/50">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
+                          Comentário:
+                        </span>
+                        {rev.comment ? (
+                          <p className="text-sm text-foreground bg-muted/30 p-3 rounded-lg border leading-relaxed">
+                            {rev.comment}
+                          </p>
+                        ) : (
+                          <p className="text-xs italic text-muted-foreground">
+                            Sem comentário textual (apenas nota em estrelas).
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -762,6 +944,14 @@ export default function Admin() {
                       actionBadgeColor =
                         'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
                       actionLabel = 'Desativou Anúncio'
+                    } else if (log.action === 'approve_review') {
+                      actionBadgeColor =
+                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      actionLabel = 'Aprovou Avaliação'
+                    } else if (log.action === 'reject_review') {
+                      actionBadgeColor =
+                        'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                      actionLabel = 'Rejeitou Avaliação'
                     }
 
                     return (

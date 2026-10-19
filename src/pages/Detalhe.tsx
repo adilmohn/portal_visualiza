@@ -24,12 +24,28 @@ import {
   Ticket,
   Copy,
   Check,
+  Star,
+  User,
+  MessageSquare,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useListingDetail } from '@/hooks/use-listing-detail'
+import { useListingReviews } from '@/hooks/use-reviews'
+import pb from '@/lib/pocketbase/client'
 import { recordContactEvent, ContactChannel, ListingPhoto } from '@/services/listing-detail'
 import { ListingType } from '@/services/listings'
 import { toast } from '@/hooks/use-toast'
@@ -221,7 +237,62 @@ export default function Detalhe() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: listing, isLoading, isNotFound, isError, refetch } = useListingDetail(id)
+  const {
+    reviews,
+    totalReviews,
+    totalPages: reviewTotalPages,
+    page: reviewPage,
+    averageStars,
+    isLoading: isLoadingReviews,
+    isSubmitting: isSubmittingReview,
+    hasUserReviewed,
+    fetchPage: fetchReviewPage,
+    submitReview,
+  } = useListingReviews(id)
+
   const [copiedVoucher, setCopiedVoucher] = useState<string | null>(null)
+  const [reviewModalOpen, setReviewModalOpen] = useState(false)
+  const [selectedStars, setSelectedStars] = useState<number>(5)
+  const [hoveredStars, setHoveredStars] = useState<number | null>(null)
+  const [reviewComment, setReviewComment] = useState('')
+
+  const isAuthenticated = pb.authStore.isValid && !!pb.authStore.record
+
+  const handleOpenReviewModal = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Login necessário',
+        description: 'Faça login para avaliar este anúncio.',
+      })
+      navigate('/login')
+      return
+    }
+    setSelectedStars(5)
+    setReviewComment('')
+    setReviewModalOpen(true)
+  }
+
+  const handleSubmitReviewForm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (selectedStars < 1 || selectedStars > 5) {
+      toast({
+        title: 'Selecione as estrelas',
+        description: 'Escolha uma nota de 1 a 5 estrelas.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const success = await submitReview({
+      stars: selectedStars,
+      comment: reviewComment.trim() || undefined,
+    })
+
+    if (success) {
+      setReviewModalOpen(false)
+      setReviewComment('')
+    }
+  }
 
   const handleCopyVoucher = useCallback(async (code: string) => {
     try {
@@ -721,6 +792,224 @@ export default function Detalhe() {
               </p>
             </section>
           )}
+
+          {/* Section: Avaliações (Rating & Reviews) */}
+          <section aria-labelledby="reviews-heading" className="space-y-6 pt-4 border-t">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-amber-500 fill-amber-500" aria-hidden="true" />
+                  <h2
+                    id="reviews-heading"
+                    className="text-xl sm:text-2xl font-bold tracking-tight text-foreground"
+                  >
+                    Avaliações
+                  </h2>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                  Opiniões verificadas de clientes e usuários do Portal Viabilize.
+                </p>
+              </div>
+
+              {/* Botão Avaliar */}
+              {hasUserReviewed ? (
+                <Badge
+                  variant="secondary"
+                  className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 px-3 py-1.5 text-xs font-semibold self-start sm:self-auto"
+                >
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                  Você já avaliou este anúncio
+                </Badge>
+              ) : (
+                <Button
+                  onClick={handleOpenReviewModal}
+                  className="min-h-[44px] gap-2 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground self-start sm:self-auto"
+                  aria-label="Avaliar este anúncio"
+                >
+                  <Star className="h-4 w-4" />
+                  <span>Avaliar</span>
+                </Button>
+              )}
+            </div>
+
+            {/* Média de estrelas card */}
+            <Card className="bg-card/70 border shadow-xs">
+              <CardContent className="p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-center justify-center bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl w-20 h-20 border border-amber-500/20 shrink-0">
+                      <span className="text-3xl font-extrabold tracking-tight">
+                        {averageStars > 0 ? averageStars.toFixed(1) : '—'}
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        de 5.0
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-5 w-5 ${
+                              star <= Math.round(averageStars)
+                                ? 'text-amber-500 fill-amber-500'
+                                : 'text-muted-foreground/30'
+                            }`}
+                            aria-hidden="true"
+                          />
+                        ))}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {totalReviews === 0
+                          ? 'Nenhuma avaliação aprovada ainda'
+                          : totalReviews === 1
+                            ? '1 avaliação aprovada'
+                            : `${totalReviews} avaliações aprovadas`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground sm:text-right max-w-xs">
+                    As avaliações passam por moderação prévia da equipe para garantir autenticidade
+                    e respeito às diretrizes do portal.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Lista de Avaliações / Estados Loading e Empty */}
+            {isLoadingReviews ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="p-4 rounded-xl border bg-card space-y-2 animate-pulse">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                    <Skeleton className="h-12 w-full" />
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border p-10 text-center space-y-3 bg-muted/20">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                  <MessageSquare className="h-6 w-6" />
+                </div>
+                <h3 className="font-semibold text-foreground text-base">
+                  Seja o primeiro a avaliar
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  Compartilhe sua experiência com {listing.name} e ajude outros membros da
+                  comunidade do Portal Viabilize.
+                </p>
+                {!hasUserReviewed && (
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleOpenReviewModal}
+                      className="min-h-[44px] gap-2 font-medium"
+                    >
+                      <Star className="h-4 w-4 text-amber-500" />
+                      Deixar avaliação
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((rev) => {
+                  const revDate = rev.created
+                    ? new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(
+                        new Date(rev.created),
+                      )
+                    : ''
+
+                  return (
+                    <div
+                      key={rev.id}
+                      className="p-5 rounded-2xl border border-border/70 bg-card/60 hover:bg-card transition-colors space-y-3 shadow-2xs"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          {rev.userAvatar ? (
+                            <img
+                              src={rev.userAvatar}
+                              alt={rev.userName || 'Foto do usuário'}
+                              className="w-10 h-10 rounded-full object-cover border"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground border">
+                              <User className="h-5 w-5" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-sm text-foreground">
+                              {rev.userName || 'Usuário'}
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`h-3.5 w-3.5 ${
+                                    s <= rev.stars
+                                      ? 'text-amber-500 fill-amber-500'
+                                      : 'text-muted-foreground/30'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {revDate && (
+                          <span className="text-xs text-muted-foreground">{revDate}</span>
+                        )}
+                      </div>
+
+                      {rev.comment && (
+                        <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed pl-13">
+                          {rev.comment}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Paginação (10 por página) */}
+                {reviewTotalPages > 1 && (
+                  <div className="flex items-center justify-between pt-4 border-t border-border">
+                    <p className="text-xs text-muted-foreground">
+                      Página {reviewPage} de {reviewTotalPages} ({totalReviews} avaliações)
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchReviewPage(reviewPage - 1)}
+                        disabled={reviewPage <= 1 || isLoadingReviews}
+                        className="min-h-[44px] min-w-[44px] px-2 focus-visible:ring-2"
+                        aria-label="Página anterior de avaliações"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchReviewPage(reviewPage + 1)}
+                        disabled={reviewPage >= reviewTotalPages || isLoadingReviews}
+                        className="min-h-[44px] min-w-[44px] px-2 focus-visible:ring-2"
+                        aria-label="Próxima página de avaliações"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Right Column: Contact Block & Direct Actions */}
@@ -858,6 +1147,115 @@ export default function Detalhe() {
           </Card>
         </aside>
       </div>
+
+      {/* MODAL: FORMULÁRIO DE AVALIAR */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleSubmitReviewForm}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-foreground">
+                <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                <span>Avaliar {listing.name}</span>
+              </DialogTitle>
+              <DialogDescription>
+                Selecione a quantidade de estrelas e deixe seu comentário sincero sobre o serviço ou
+                produto.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* Star selector (1 to 5) */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-foreground">
+                  Sua Nota <span className="text-destructive">*</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((s) => {
+                    const active = hoveredStars !== null ? s <= hoveredStars : s <= selectedStars
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setSelectedStars(s)}
+                        onMouseEnter={() => setHoveredStars(s)}
+                        onMouseLeave={() => setHoveredStars(null)}
+                        className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-muted transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        aria-label={`Selecionar ${s} estrela${s > 1 ? 's' : ''}`}
+                      >
+                        <Star
+                          className={`h-7 w-7 transition-transform hover:scale-110 ${
+                            active ? 'text-amber-500 fill-amber-500' : 'text-muted-foreground/30'
+                          }`}
+                        />
+                      </button>
+                    )
+                  })}
+                  <span className="text-sm font-semibold text-muted-foreground ml-2">
+                    {selectedStars} {selectedStars === 1 ? 'estrela' : 'estrelas'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Comment optional max 500 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="review-comment" className="text-xs font-semibold text-foreground">
+                    Comentário (opcional)
+                  </Label>
+                  <span className="text-[11px] text-muted-foreground">
+                    {reviewComment.length}/500
+                  </span>
+                </div>
+                <Textarea
+                  id="review-comment"
+                  rows={4}
+                  maxLength={500}
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Conte sua experiência, atendimento, qualidade do serviço ou diferenciais..."
+                  className="resize-none focus-visible:ring-2"
+                />
+              </div>
+
+              <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground flex items-start gap-2 border">
+                <Lock className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+                <span>
+                  Sua avaliação entrará com status <strong>pendente</strong> e aparecerá
+                  publicamente após aprovação pela moderação.
+                </span>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReviewModalOpen(false)}
+                className="min-h-[44px] sm:min-h-[36px]"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingReview}
+                className="min-h-[44px] sm:min-h-[36px] font-semibold gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {isSubmittingReview ? (
+                  <>
+                    <RotateCw className="h-4 w-4 animate-spin" />
+                    <span>Enviando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>Enviar Avaliação</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
