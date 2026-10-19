@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-19T19:44:53.432Z",
+  "generatedAt": "2026-10-19T19:58:05.167Z",
   "collections": [
     {
       "name": "users",
@@ -396,6 +396,146 @@
       "indexes": [
         "CREATE INDEX idx_auditLog_adminId ON auditLog (adminId)",
         "CREATE INDEX idx_auditLog_targetId ON auditLog (targetId)"
+      ]
+    },
+    {
+      "name": "packages",
+      "type": "base",
+      "apiRules": {
+        "list": "",
+        "view": "",
+        "create": "@request.auth.role = \"admin\"",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "mediaType",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["destaque_diretorio", "banner_lateral", "banner_inferior", "popup"]
+        },
+        {
+          "name": "period",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["semanal", "mensal", "impressoes", "cliques"]
+        },
+        {
+          "name": "price",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ativo", "inativo"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_packages_status ON packages (status)",
+        "CREATE INDEX idx_packages_mediaType ON packages (mediaType)"
+      ]
+    },
+    {
+      "name": "sales",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"admin\"",
+        "view": "@request.auth.role = \"admin\"",
+        "create": "",
+        "update": "@request.auth.role = \"admin\"",
+        "delete": "@request.auth.role = \"admin\""
+      },
+      "fields": [
+        {
+          "name": "packageId",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "packages"
+        },
+        {
+          "name": "advertiserName",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "advertiserEmail",
+          "type": "email",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "startDate",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "endDate",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "amount",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ativa", "encerrada", "cancelada"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_sales_packageId ON sales (packageId)",
+        "CREATE INDEX idx_sales_status ON sales (status)",
+        "CREATE INDEX idx_sales_startDate ON sales (startDate)"
       ]
     }
   ]

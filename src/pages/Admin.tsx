@@ -38,8 +38,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Coins } from 'lucide-react'
 import { useAdminQueue } from '@/hooks/use-admin-queue'
 import { useAdminMetrics } from '@/hooks/use-admin-metrics'
+import { AdminMonetization } from '@/components/admin/AdminMonetization'
 import type { AdminListingItem } from '@/services/admin'
 
 export default function Admin() {
@@ -277,12 +279,12 @@ export default function Admin() {
         </Card>
       </div>
 
-      {/* Tabs: Fila de Moderação, Anúncios Aprovados, Auditoria */}
+      {/* Tabs: Fila de Moderação, Anúncios Aprovados, Auditoria, Monetização */}
       <Tabs defaultValue="queue" className="space-y-6">
-        <TabsList className="grid grid-cols-3 max-w-md h-12 p-1 bg-muted">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-4 max-w-2xl h-auto sm:h-12 p-1 bg-muted gap-1">
           <TabsTrigger
             value="queue"
-            className="flex items-center gap-2 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
+            className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
           >
             <span>Fila Pendente</span>
             {pendingListings.length > 0 && (
@@ -293,7 +295,7 @@ export default function Admin() {
           </TabsTrigger>
           <TabsTrigger
             value="approved"
-            className="flex items-center gap-2 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
+            className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
           >
             <span>Aprovados</span>
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] rounded-full">
@@ -301,8 +303,15 @@ export default function Admin() {
             </Badge>
           </TabsTrigger>
           <TabsTrigger
+            value="monetizacao"
+            className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
+          >
+            <Coins className="h-3.5 w-3.5" />
+            <span>Monetização</span>
+          </TabsTrigger>
+          <TabsTrigger
             value="audit"
-            className="flex items-center gap-2 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
+            className="flex items-center justify-center gap-1.5 text-xs sm:text-sm min-h-[40px] focus-visible:ring-2"
           >
             <History className="h-3.5 w-3.5" />
             <span>Auditoria</span>
@@ -705,7 +714,12 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* TAB 3: AUDIT TRAIL */}
+        {/* TAB 3: MONETIZAÇÃO */}
+        <TabsContent value="monetizacao" className="space-y-4">
+          <AdminMonetization />
+        </TabsContent>
+
+        {/* TAB 4: AUDIT TRAIL */}
         <TabsContent value="audit" className="space-y-4">
           <Card>
             <CardHeader>

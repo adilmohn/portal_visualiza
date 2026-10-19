@@ -22,6 +22,7 @@ const Privacidade = lazy(() => import('@/pages/Privacidade'))
 const Termos = lazy(() => import('@/pages/Termos'))
 const Contato = lazy(() => import('@/pages/Contato'))
 const Detalhe = lazy(() => import('@/pages/Detalhe'))
+const Planos = lazy(() => import('@/pages/Planos'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
                     <Route path="/privacidade" element={<Privacidade />} />
                     <Route path="/termos" element={<Termos />} />
                     <Route path="/contato" element={<Contato />} />
+                    <Route path="/planos" element={<Planos />} />
 
                     {/* Rotas protegidas */}
                     <Route element={<ProtectedRoute />}>
