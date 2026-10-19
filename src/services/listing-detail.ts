@@ -38,6 +38,8 @@ export interface ListingDetail {
   pinLng?: number
   created: string
   updated: string
+  userId?: string
+  rejectedReason?: string
   photos: ListingPhoto[]
   promotions: ListingPromotion[]
 }

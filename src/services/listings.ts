@@ -5,6 +5,7 @@ export type ListingStatus = 'pendente' | 'aprovado' | 'rejeitado' | 'inativo'
 
 export interface ListingItem {
   id: string
+  userId?: string
   name: string
   type: ListingType
   description: string
@@ -20,6 +21,7 @@ export interface ListingItem {
   zone?: string
   neighborhood?: string
   status: ListingStatus
+  rejectedReason?: string
   pinEnabled?: boolean
   pinLat?: number
   pinLng?: number
