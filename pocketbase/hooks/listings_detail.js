@@ -30,13 +30,13 @@ routerAdd('GET', '/backend/v1/listings/detail', (e) => {
       })
     }
 
-    // Fetch associated photos (order by created ASC)
+    // Fetch associated photos (order by isMain DESC, created ASC)
     let photos = []
     try {
       const photoRecords = $app.findRecordsByFilter(
         'photos',
         `listingId = '${listing.id}'`,
-        'created',
+        '-isMain,created',
         50,
         0,
       )
@@ -47,6 +47,7 @@ routerAdd('GET', '/backend/v1/listings/detail', (e) => {
             id: p.id,
             filename: filename,
             url: filename ? `/api/files/photos/${p.id}/${filename}` : '',
+            isMain: p.getBool('isMain'),
             created: p.getString('created'),
           }
         })

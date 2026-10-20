@@ -82,6 +82,13 @@ const TYPE_CONFIG: Record<
     schemaType: 'Product',
     icon: Package,
   },
+  servico: {
+    label: 'Serviço',
+    badgeClass:
+      'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    schemaType: 'Service',
+    icon: Briefcase,
+  },
 }
 
 function normalizeWhatsAppNumber(raw: string): string {
@@ -131,6 +138,7 @@ const PhotoGallery = memo(function PhotoGallery({ photos, title, type }: PhotoGa
       negocio: 'store,retail',
       solucao: 'technology,laptop',
       produto: 'package,craft',
+      servico: 'service,consulting',
     }
     const kw = kwMap[type] || 'business'
     return `https://img.usecurling.com/p/1200/800?q=${encodeURIComponent(kw)}`

@@ -17,7 +17,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
-import { usePromotionsAndVouchers } from '@/hooks/use-vouchers'
+import { usePromotionsAndVouchers, type UserListingOption } from '@/hooks/use-vouchers'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -26,8 +26,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/hooks/use-toast'
+import { ListingModal } from '@/components/ListingModal'
+import { Pencil, Star } from 'lucide-react'
 
-export default function Area() {
+export function Area() {
   const { user, signOut } = useAuth()
   const {
     promotions,
@@ -46,6 +48,20 @@ export default function Area() {
   const [title, setTitle] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
+
+  // Listing Create / Edit Modal State
+  const [listingModalOpen, setListingModalOpen] = useState(false)
+  const [listingToEdit, setListingToEdit] = useState<UserListingOption | null>(null)
+
+  const handleOpenCreateListing = () => {
+    setListingToEdit(null)
+    setListingModalOpen(true)
+  }
+
+  const handleOpenEditListing = (listing: UserListingOption) => {
+    setListingToEdit(listing)
+    setListingModalOpen(true)
+  }
 
   const handleCopyCode = async (code: string) => {
     try {
@@ -214,47 +230,109 @@ export default function Area() {
 
         {/* Listings Card */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <span>Meus Anúncios ({listings.length})</span>
-            </CardTitle>
-            <CardDescription>
-              Acompanhe o status e a aprovação das suas listagens cadastradas.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                <span>Meus Anúncios ({listings.length})</span>
+              </CardTitle>
+              <CardDescription className="text-xs mt-1">
+                Cadastre múltiplos serviços, produtos e empresas com a mesma conta.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleOpenCreateListing}
+              className="gap-1.5 font-semibold text-xs min-h-[36px]"
+              aria-label="Cadastrar novo anúncio"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>Novo Anúncio</span>
+            </Button>
           </CardHeader>
           <CardContent className="space-y-3">
             {isLoading ? (
               <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
               </div>
             ) : listings.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                Você ainda não possui anúncios cadastrados.
+              <div className="rounded-lg border border-dashed border-border p-6 text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Você ainda não possui anúncios cadastrados.
+                </p>
+                <Button
+                  size="sm"
+                  onClick={handleOpenCreateListing}
+                  className="gap-1.5 font-semibold text-xs"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Cadastrar primeiro anúncio</span>
+                </Button>
               </div>
             ) : (
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                {listings.map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/30 text-sm"
-                  >
-                    <span className="font-medium truncate max-w-[200px]">{l.name}</span>
-                    <Badge
-                      variant={
-                        l.status === 'aprovado'
-                          ? 'default'
-                          : l.status === 'rejeitado'
-                            ? 'destructive'
-                            : 'secondary'
-                      }
-                      className="text-xs capitalize"
+              <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                {listings.map((l) => {
+                  const mainPhoto = (l.photos || []).find((p) => p.isMain) || (l.photos || [])[0]
+                  return (
+                    <div
+                      key={l.id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 text-sm gap-2"
                     >
-                      {l.status}
-                    </Badge>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {mainPhoto ? (
+                          <div className="relative h-10 w-10 rounded-md overflow-hidden bg-muted border shrink-0">
+                            <img
+                              src={mainPhoto.url}
+                              alt={`Capa de ${l.name}`}
+                              className="h-full w-full object-cover"
+                            />
+                            {mainPhoto.isMain && (
+                              <div className="absolute top-0 right-0 bg-primary text-primary-foreground p-0.5 rounded-bl">
+                                <Star className="h-2 w-2 fill-current" />
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center text-muted-foreground shrink-0 border">
+                            <Building2 className="h-5 w-5 opacity-40" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate">{l.name}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">
+                              {l.type === 'servico' ? 'Serviço' : l.type}
+                            </Badge>
+                            <Badge
+                              variant={
+                                l.status === 'aprovado'
+                                  ? 'default'
+                                  : l.status === 'rejeitado'
+                                    ? 'destructive'
+                                    : 'secondary'
+                              }
+                              className="text-[10px] py-0 px-1.5 capitalize"
+                            >
+                              {l.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenEditListing(l)}
+                        className="gap-1 min-h-[36px] text-xs font-medium shrink-0"
+                        aria-label={`Editar anúncio ${l.name}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Editar</span>
+                      </Button>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </CardContent>
@@ -513,6 +591,16 @@ export default function Area() {
           )}
         </div>
       </div>
+      {/* Modal for Creating / Editing Listing */}
+      <ListingModal
+        open={listingModalOpen}
+        onOpenChange={setListingModalOpen}
+        listingToEdit={listingToEdit}
+        userId={user?.id || ''}
+        onSaved={reload}
+      />
     </div>
   )
 }
+
+export default Area

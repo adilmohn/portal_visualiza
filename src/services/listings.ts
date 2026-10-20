@@ -1,6 +1,6 @@
 import pb from '@/lib/pocketbase/client'
 
-export type ListingType = 'empresa' | 'negocio' | 'solucao' | 'produto'
+export type ListingType = 'empresa' | 'negocio' | 'solucao' | 'produto' | 'servico'
 export type ListingStatus = 'pendente' | 'aprovado' | 'rejeitado' | 'inativo'
 export type AiVerdict = 'aprovado' | 'duvidoso' | 'reprovado'
 
@@ -123,7 +123,7 @@ export async function searchListings(
           try {
             const photoList = await pb.collection('photos').getList(1, 1, {
               filter: `listingId = '${rec.id}'`,
-              sort: 'created',
+              sort: '-isMain,created',
             })
             if (photoList.items.length > 0) {
               const photoRec = photoList.items[0]

@@ -67,6 +67,12 @@ const TYPE_CONFIG: Record<
       'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800',
     icon: Package,
   },
+  servico: {
+    label: 'Serviço',
+    badgeClass:
+      'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    icon: Briefcase,
+  },
 }
 
 export default function Diretorio() {
@@ -371,6 +377,9 @@ export default function Diretorio() {
                 <SelectItem value="produto" className="min-h-[44px]">
                   Produto
                 </SelectItem>
+                <SelectItem value="servico" className="min-h-[44px]">
+                  Serviço
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -664,6 +673,7 @@ function ListingCard({ listing, onTrackContact }: ListingCardProps) {
       negocio: 'store',
       solucao: 'technology',
       produto: 'product',
+      servico: 'service',
     }
     const kw = keywordMap[listing.type] || 'business'
     return `https://img.usecurling.com/p/600/360?q=${kw}&color=slate`

@@ -5,6 +5,7 @@ export interface ListingPhoto {
   id: string
   filename: string
   url: string
+  isMain?: boolean
   created?: string
 }
 
@@ -129,16 +130,17 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
       try {
         const photoList = await pb.collection('photos').getFullList({
           filter: `listingId = '${cleanId}'`,
-          sort: 'created',
+          sort: '-isMain,created',
         })
         photos = photoList
           .map((p) => {
-            const rawP = p as unknown as { url?: string }
+            const rawP = p as unknown as { url?: string; isMain?: boolean }
             const filename = rawP.url || ''
             return {
               id: p.id,
               filename,
               url: filename ? pb.files.getURL(p, filename) : '',
+              isMain: Boolean(rawP.isMain),
               created: p.created,
             }
           })

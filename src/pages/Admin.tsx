@@ -46,6 +46,19 @@ import { useAdminMetrics } from '@/hooks/use-admin-metrics'
 import { useAdminReviews } from '@/hooks/use-admin-reviews'
 import { AdminMonetization } from '@/components/admin/AdminMonetization'
 import type { AdminListingItem } from '@/services/admin'
+import type { ListingType } from '@/services/listings'
+
+const TYPE_LABELS: Record<ListingType, string> = {
+  empresa: 'Empresa',
+  negocio: 'Negócio Local',
+  solucao: 'Solução',
+  produto: 'Produto',
+  servico: 'Serviço',
+}
+
+function getListingTypeLabel(type: string): string {
+  return TYPE_LABELS[type as ListingType] || type
+}
 
 export default function Admin() {
   const {
@@ -406,8 +419,8 @@ export default function Admin() {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-lg font-bold text-foreground">{item.name}</h3>
-                            <Badge variant="secondary" className="capitalize text-xs font-semibold">
-                              {item.type}
+                            <Badge variant="secondary" className="text-xs font-semibold">
+                              {getListingTypeLabel(item.type)}
                             </Badge>
                             <Badge
                               variant="outline"
@@ -854,8 +867,8 @@ export default function Admin() {
                               </span>
                             </td>
                             <td className="py-3 px-4">
-                              <Badge variant="outline" className="capitalize text-xs">
-                                {listing.type}
+                              <Badge variant="outline" className="text-xs">
+                                {getListingTypeLabel(listing.type)}
                               </Badge>
                             </td>
                             <td className="py-3 px-4 text-xs text-muted-foreground">
@@ -903,8 +916,8 @@ export default function Admin() {
                               {listing.city} - {listing.state}
                             </p>
                           </div>
-                          <Badge variant="outline" className="capitalize text-xs">
-                            {listing.type}
+                          <Badge variant="outline" className="text-xs">
+                            {getListingTypeLabel(listing.type)}
                           </Badge>
                         </div>
 
@@ -1185,8 +1198,8 @@ export default function Admin() {
           <DialogHeader>
             <div className="flex items-center gap-2">
               <DialogTitle className="text-xl">{previewTarget?.name}</DialogTitle>
-              <Badge variant="outline" className="capitalize text-xs">
-                {previewTarget?.type}
+              <Badge variant="outline" className="text-xs">
+                {previewTarget ? getListingTypeLabel(previewTarget.type) : ''}
               </Badge>
             </div>
             <DialogDescription>

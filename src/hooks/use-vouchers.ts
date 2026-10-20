@@ -13,8 +13,29 @@ import { useAuth } from '@/hooks/use-auth'
 
 export interface UserListingOption {
   id: string
+  userId?: string
   name: string
+  type: string
+  description: string
+  email: string
+  phone?: string
+  whatsapp?: string
+  website?: string
+  cep: string
+  address: string
+  city: string
+  state: string
+  country?: string
+  neighborhood?: string
   status: string
+  pinEnabled?: boolean
+  rejectedReason?: string
+  aiVerdict?: string
+  photos?: Array<{
+    id: string
+    url: string
+    isMain?: boolean
+  }>
 }
 
 export function usePromotionsAndVouchers() {
@@ -39,12 +60,78 @@ export function usePromotionsAndVouchers() {
         sort: 'name',
       })
 
+      // 1.1 Fetch photos for these listings to know which photo is main
+      const listingIds = listingRecords.map((l) => l.id)
+      let photosByListing: Record<string, Array<{ id: string; url: string; isMain?: boolean }>> = {}
+      if (listingIds.length > 0) {
+        try {
+          const photoRecords = await pb.collection('photos').getFullList({
+            filter: listingIds.map((id) => `listingId = '${id}'`).join(' || '),
+            sort: '-isMain,created',
+          })
+          for (const pr of photoRecords) {
+            const rawPr = pr as unknown as {
+              listingId?: string | string[]
+              url?: string
+              isMain?: boolean
+            }
+            const lId = Array.isArray(rawPr.listingId) ? rawPr.listingId[0] : rawPr.listingId
+            if (lId && rawPr.url) {
+              if (!photosByListing[lId]) photosByListing[lId] = []
+              photosByListing[lId].push({
+                id: pr.id,
+                url: pb.files.getURL(pr, rawPr.url),
+                isMain: Boolean(rawPr.isMain),
+              })
+            }
+          }
+        } catch (_) {
+          // best-effort photos
+        }
+      }
+
       const loadedListings: UserListingOption[] = listingRecords.map((l) => {
-        const raw = l as unknown as { name?: string; status?: string }
+        const raw = l as unknown as {
+          userId?: string
+          name?: string
+          type?: string
+          description?: string
+          email?: string
+          phone?: string
+          whatsapp?: string
+          website?: string
+          cep?: string
+          address?: string
+          city?: string
+          state?: string
+          country?: string
+          neighborhood?: string
+          status?: string
+          pinEnabled?: boolean
+          rejectedReason?: string
+          aiVerdict?: string
+        }
         return {
           id: l.id,
+          userId: raw.userId,
           name: raw.name || 'Anúncio sem nome',
+          type: raw.type || 'empresa',
+          description: raw.description || '',
+          email: raw.email || '',
+          phone: raw.phone || '',
+          whatsapp: raw.whatsapp || '',
+          website: raw.website || '',
+          cep: raw.cep || '',
+          address: raw.address || '',
+          city: raw.city || '',
+          state: raw.state || '',
+          country: raw.country || 'Brasil',
+          neighborhood: raw.neighborhood || '',
           status: raw.status || 'pendente',
+          pinEnabled: Boolean(raw.pinEnabled),
+          rejectedReason: raw.rejectedReason || '',
+          aiVerdict: raw.aiVerdict || '',
+          photos: photosByListing[l.id] || [],
         }
       })
       setListings(loadedListings)

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-20T03:05:32.575Z",
+  "generatedAt": "2026-10-20T03:35:29.257Z",
   "collections": [
     {
       "name": "users",
@@ -80,7 +80,7 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["empresa", "negocio", "solucao", "produto"]
+          "selectValues": ["empresa", "negocio", "solucao", "produto", "servico"]
         },
         {
           "name": "description",
@@ -250,6 +250,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "isMain",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []

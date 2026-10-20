@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/card'
 import { toast } from 'sonner'
 
-export type ListingTypeOption = 'empresa' | 'negocio' | 'solucao' | 'produto'
+export type ListingTypeOption = 'empresa' | 'negocio' | 'solucao' | 'produto' | 'servico'
 
 interface ViaCepResponse {
   cep?: string
@@ -385,6 +385,7 @@ export default function Cadastro() {
           const photoFormData = new FormData()
           photoFormData.append('listingId', createdListing.id)
           photoFormData.append('url', photoFile)
+          photoFormData.append('isMain', 'true')
 
           await pb.collection('photos').create(photoFormData)
         } catch (photoErr) {
@@ -734,6 +735,9 @@ export default function Cadastro() {
                     <SelectItem value="produto" className="min-h-[44px] flex items-center">
                       Produto
                     </SelectItem>
+                    <SelectItem value="servico" className="min-h-[44px] flex items-center">
+                      Serviço
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 {showTypeErr && (
@@ -757,7 +761,7 @@ export default function Cadastro() {
                     setStep2Errors((prev) => ({ ...prev, name: '' }))
                   }}
                   onBlur={() => markTouched('name')}
-                  placeholder="Nome da empresa, solução ou produto"
+                  placeholder="Nome da empresa, serviço ou produto"
                   className={`min-h-[44px] ${showNameErr ? 'border-destructive focus-visible:ring-destructive' : ''}`}
                   disabled={step2Submitting}
                   aria-invalid={showNameErr}
@@ -1110,10 +1114,11 @@ export default function Cadastro() {
             {/* Foto de Capa (Opcional, máx 5MB, JPG/PNG) */}
             <div className="space-y-2 pt-2 border-t border-border/60">
               <Label htmlFor="listing-photo" className="text-sm font-medium">
-                Foto ou Logotipo (opcional)
+                Foto Principal / Capa (opcional)
               </Label>
               <p className="text-xs text-muted-foreground">
-                Formatos aceitos: JPG ou PNG. Tamanho máximo: 5MB.
+                Formatos aceitos: JPG ou PNG. Tamanho máximo: 5MB. Esta foto será definida como
+                principal (capa) no diretório.
               </p>
 
               {photoPreview ? (

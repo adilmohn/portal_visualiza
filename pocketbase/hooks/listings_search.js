@@ -64,17 +64,18 @@ routerAdd('GET', '/backend/v1/listings/search', (e) => {
     // Retrieve page records
     const listings = $app.findRecordsByFilter('listings', filterExpr, '-created', perPage, offset)
 
-    // Format items and fetch first photo for each listing
+    // Format items and fetch main photo (or first photo) for each listing
     const items = listings.map((item) => {
       let firstPhotoUrl = null
       let photoId = null
       let photoFilename = null
 
       try {
+        // Prioritize photo with isMain = true, fallback to first created photo
         const photos = $app.findRecordsByFilter(
           'photos',
           `listingId = '${item.id}'`,
-          'created',
+          '-isMain,created',
           1,
           0,
         )
