@@ -111,9 +111,9 @@ async function loadPhotosForListings(listingIds: string[]): Promise<Map<string, 
     })
 
     for (const p of records) {
-      const listingId =
-        (p as unknown as { listingId?: string }).listingId || p.getStringValue?.('listingId') || ''
-      const filename = (p as unknown as { url?: string }).url || p.getStringValue?.('url') || ''
+      const rawP = p as unknown as { listingId?: string; url?: string }
+      const listingId = rawP.listingId || ''
+      const filename = rawP.url || ''
       if (listingId && filename) {
         const photoObj: ListingPhoto = {
           id: p.id,
@@ -376,25 +376,20 @@ export async function getAuditTrail(limit = 20): Promise<AuditLogEntry[]> {
     })
 
     return res.items.map((item) => {
-      const expandAdmin = (
-        item as unknown as { expand?: { adminId?: { email?: string; name?: string } } }
-      ).expand?.adminId
+      const rawItem = item as unknown as {
+        adminId?: string
+        action?: string
+        targetId?: string
+        reason?: string
+        expand?: { adminId?: { email?: string; name?: string } }
+      }
+      const expandAdmin = rawItem.expand?.adminId
       return {
         id: item.id,
-        adminId:
-          item.getStringValue?.('adminId') ||
-          (item as unknown as { adminId?: string }).adminId ||
-          '',
-        action:
-          item.getStringValue?.('action') || (item as unknown as { action?: string }).action || '',
-        targetId:
-          item.getStringValue?.('targetId') ||
-          (item as unknown as { targetId?: string }).targetId ||
-          '',
-        reason:
-          item.getStringValue?.('reason') ||
-          (item as unknown as { reason?: string }).reason ||
-          undefined,
+        adminId: rawItem.adminId || '',
+        action: rawItem.action || '',
+        targetId: rawItem.targetId || '',
+        reason: rawItem.reason || undefined,
         created: item.created,
         updated: item.updated,
         adminEmail: expandAdmin?.email,

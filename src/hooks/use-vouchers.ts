@@ -39,14 +39,14 @@ export function usePromotionsAndVouchers() {
         sort: 'name',
       })
 
-      const loadedListings: UserListingOption[] = listingRecords.map((l) => ({
-        id: l.id,
-        name:
-          l.getStringValue('name') ||
-          (l as unknown as { name?: string }).name ||
-          'Anúncio sem nome',
-        status: l.getStringValue('status') || 'pendente',
-      }))
+      const loadedListings: UserListingOption[] = listingRecords.map((l) => {
+        const raw = l as unknown as { name?: string; status?: string }
+        return {
+          id: l.id,
+          name: raw.name || 'Anúncio sem nome',
+          status: raw.status || 'pendente',
+        }
+      })
       setListings(loadedListings)
 
       // 2. Fetch active promotions

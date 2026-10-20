@@ -127,8 +127,7 @@ export async function searchListings(
             })
             if (photoList.items.length > 0) {
               const photoRec = photoList.items[0]
-              const filename =
-                photoRec.getStringValue('url') || (photoRec as unknown as { url?: string }).url
+              const filename = (photoRec as unknown as { url?: string }).url
               if (filename) {
                 photoId = photoRec.id
                 photoFilename = filename
@@ -139,56 +138,53 @@ export async function searchListings(
             // best effort photo retrieval
           }
 
+          const rawRec = rec as unknown as {
+            name?: string
+            type?: ListingType
+            description?: string
+            email?: string
+            phone?: string
+            whatsapp?: string
+            website?: string
+            cep?: string
+            address?: string
+            city?: string
+            state?: string
+            country?: string
+            zone?: string
+            neighborhood?: string
+            status?: ListingStatus
+            aiVerdict?: AiVerdict
+            rejectedReason?: string
+            pinEnabled?: boolean
+            pinLat?: number
+            pinLng?: number
+          }
+
           return {
             id: rec.id,
-            name: rec.getStringValue('name') || (rec as unknown as { name?: string }).name || '',
-            type: (rec.getStringValue('type') ||
-              (rec as unknown as { type?: ListingType }).type ||
-              'empresa') as ListingType,
-            description:
-              rec.getStringValue('description') ||
-              (rec as unknown as { description?: string }).description ||
-              '',
-            email:
-              rec.getStringValue('email') || (rec as unknown as { email?: string }).email || '',
-            phone: rec.getStringValue('phone') || (rec as unknown as { phone?: string }).phone,
-            whatsapp:
-              rec.getStringValue('whatsapp') || (rec as unknown as { whatsapp?: string }).whatsapp,
-            website:
-              rec.getStringValue('website') || (rec as unknown as { website?: string }).website,
-            cep: rec.getStringValue('cep') || (rec as unknown as { cep?: string }).cep || '',
-            address:
-              rec.getStringValue('address') ||
-              (rec as unknown as { address?: string }).address ||
-              '',
-            city: rec.getStringValue('city') || (rec as unknown as { city?: string }).city || '',
-            state:
-              rec.getStringValue('state') || (rec as unknown as { state?: string }).state || '',
-            country:
-              rec.getStringValue('country') ||
-              (rec as unknown as { country?: string }).country ||
-              'Brasil',
-            zone: rec.getStringValue('zone') || (rec as unknown as { zone?: string }).zone,
-            neighborhood:
-              rec.getStringValue('neighborhood') ||
-              (rec as unknown as { neighborhood?: string }).neighborhood,
-            status: (rec.getStringValue('status') ||
-              (rec as unknown as { status?: ListingStatus }).status ||
-              'aprovado') as ListingStatus,
-            aiVerdict:
-              (rec.getStringValue('aiVerdict') as AiVerdict) ||
-              ((rec as unknown as { aiVerdict?: AiVerdict }).aiVerdict ?? undefined),
-            rejectedReason:
-              rec.getStringValue('rejectedReason') ||
-              (rec as unknown as { rejectedReason?: string }).rejectedReason ||
-              undefined,
-            pinEnabled:
-              rec.getBoolValue?.('pinEnabled') ??
-              (rec as unknown as { pinEnabled?: boolean }).pinEnabled,
-            pinLat: rec.getFloatValue?.('pinLat') ?? (rec as unknown as { pinLat?: number }).pinLat,
-            pinLng: rec.getFloatValue?.('pinLng') ?? (rec as unknown as { pinLng?: number }).pinLng,
-            created: rec.getStringValue('created') || rec.created,
-            updated: rec.getStringValue('updated') || rec.updated,
+            name: rawRec.name || '',
+            type: (rawRec.type || 'empresa') as ListingType,
+            description: rawRec.description || '',
+            email: rawRec.email || '',
+            phone: rawRec.phone,
+            whatsapp: rawRec.whatsapp,
+            website: rawRec.website,
+            cep: rawRec.cep || '',
+            address: rawRec.address || '',
+            city: rawRec.city || '',
+            state: rawRec.state || '',
+            country: rawRec.country || 'Brasil',
+            zone: rawRec.zone,
+            neighborhood: rawRec.neighborhood,
+            status: (rawRec.status || 'aprovado') as ListingStatus,
+            aiVerdict: rawRec.aiVerdict ?? undefined,
+            rejectedReason: rawRec.rejectedReason || undefined,
+            pinEnabled: rawRec.pinEnabled,
+            pinLat: rawRec.pinLat,
+            pinLng: rawRec.pinLng,
+            created: rec.created,
+            updated: rec.updated,
             photo: photoUrl,
             photoId,
             photoFilename,
@@ -220,19 +216,18 @@ export async function getDirectoryLocations(): Promise<GeoLocationOption[]> {
       fields: 'state,city,neighborhood',
     })
     return records
-      .map((r) => ({
-        state: (
-          r.getStringValue('state') ||
-          (r as unknown as { state?: string }).state ||
-          ''
-        ).trim(),
-        city: (r.getStringValue('city') || (r as unknown as { city?: string }).city || '').trim(),
-        neighborhood: (
-          r.getStringValue('neighborhood') ||
-          (r as unknown as { neighborhood?: string }).neighborhood ||
-          ''
-        ).trim(),
-      }))
+      .map((r) => {
+        const raw = r as unknown as {
+          state?: string
+          city?: string
+          neighborhood?: string
+        }
+        return {
+          state: (raw.state || '').trim(),
+          city: (raw.city || '').trim(),
+          neighborhood: (raw.neighborhood || '').trim(),
+        }
+      })
       .filter((loc) => loc.state && loc.city)
   } catch (err) {
     console.error('Falha ao carregar opções de localização:', err)

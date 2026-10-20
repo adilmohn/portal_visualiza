@@ -76,20 +76,24 @@ export async function getOwnerPromotions(
       expand: 'listingId',
     })
 
-    return records.map((r) => ({
-      id: r.id,
-      listingId:
-        r.getStringValue('listingId') || (r as unknown as { listingId?: string }).listingId || '',
-      title: r.getStringValue('title') || (r as unknown as { title?: string }).title || '',
-      description:
-        r.getStringValue('description') ||
-        (r as unknown as { description?: string }).description ||
-        '',
-      active: r.getBoolValue?.('active') ?? (r as unknown as { active?: boolean }).active ?? true,
-      created: r.getStringValue('created') || r.created,
-      updated: r.getStringValue('updated') || r.updated,
-      expand: r.expand as PromotionItem['expand'],
-    }))
+    return records.map((r) => {
+      const raw = r as unknown as {
+        listingId?: string
+        title?: string
+        description?: string
+        active?: boolean
+      }
+      return {
+        id: r.id,
+        listingId: raw.listingId || '',
+        title: raw.title || '',
+        description: raw.description || '',
+        active: raw.active ?? true,
+        created: r.created,
+        updated: r.updated,
+        expand: r.expand as PromotionItem['expand'],
+      }
+    })
   } catch (err) {
     console.error('Erro ao buscar promoções do proprietário:', err)
     return []
@@ -107,21 +111,20 @@ export async function createPromotion(params: CreatePromotionParams): Promise<Pr
     active: params.active ?? true,
   })
 
+  const rawCreated = record as unknown as {
+    listingId?: string
+    title?: string
+    description?: string
+    active?: boolean
+  }
   return {
     id: record.id,
-    listingId:
-      record.getStringValue('listingId') ||
-      (record as unknown as { listingId?: string }).listingId ||
-      '',
-    title: record.getStringValue('title') || (record as unknown as { title?: string }).title || '',
-    description:
-      record.getStringValue('description') ||
-      (record as unknown as { description?: string }).description ||
-      '',
-    active:
-      record.getBoolValue?.('active') ?? (record as unknown as { active?: boolean }).active ?? true,
-    created: record.getStringValue('created') || record.created,
-    updated: record.getStringValue('updated') || record.updated,
+    listingId: rawCreated.listingId || '',
+    title: rawCreated.title || '',
+    description: rawCreated.description || '',
+    active: rawCreated.active ?? true,
+    created: record.created,
+    updated: record.updated,
   }
 }
 
@@ -152,20 +155,24 @@ export async function getListingVouchers(listingId?: string): Promise<VoucherIte
       expand: 'promotionId',
     })
 
-    return records.map((r) => ({
-      id: r.id,
-      code: r.getStringValue('code') || (r as unknown as { code?: string }).code || '',
-      listingId:
-        r.getStringValue('listingId') || (r as unknown as { listingId?: string }).listingId || '',
-      promotionId:
-        r.getStringValue('promotionId') ||
-        (r as unknown as { promotionId?: string }).promotionId ||
-        '',
-      used: r.getBoolValue?.('used') ?? (r as unknown as { used?: boolean }).used ?? false,
-      created: r.getStringValue('created') || r.created,
-      updated: r.getStringValue('updated') || r.updated,
-      expand: r.expand as VoucherItem['expand'],
-    }))
+    return records.map((r) => {
+      const raw = r as unknown as {
+        code?: string
+        listingId?: string
+        promotionId?: string
+        used?: boolean
+      }
+      return {
+        id: r.id,
+        code: raw.code || '',
+        listingId: raw.listingId || '',
+        promotionId: raw.promotionId || '',
+        used: raw.used ?? false,
+        created: r.created,
+        updated: r.updated,
+        expand: r.expand as VoucherItem['expand'],
+      }
+    })
   } catch (err) {
     console.error('Erro ao buscar vouchers:', err)
     return []
@@ -187,18 +194,20 @@ export async function getActiveVoucherForPromotion(
     if (records.items.length === 0) return null
 
     const r = records.items[0]
+    const raw = r as unknown as {
+      code?: string
+      listingId?: string
+      promotionId?: string
+      used?: boolean
+    }
     return {
       id: r.id,
-      code: r.getStringValue('code') || (r as unknown as { code?: string }).code || '',
-      listingId:
-        r.getStringValue('listingId') || (r as unknown as { listingId?: string }).listingId || '',
-      promotionId:
-        r.getStringValue('promotionId') ||
-        (r as unknown as { promotionId?: string }).promotionId ||
-        '',
-      used: r.getBoolValue?.('used') ?? (r as unknown as { used?: boolean }).used ?? false,
-      created: r.getStringValue('created') || r.created,
-      updated: r.getStringValue('updated') || r.updated,
+      code: raw.code || '',
+      listingId: raw.listingId || '',
+      promotionId: raw.promotionId || '',
+      used: raw.used ?? false,
+      created: r.created,
+      updated: r.updated,
     }
   } catch (_) {
     return null
@@ -219,21 +228,21 @@ export async function getListingActiveVouchers(
 
     const map: Record<string, VoucherItem> = {}
     for (const r of records) {
-      const promoId =
-        r.getStringValue('promotionId') ||
-        (r as unknown as { promotionId?: string }).promotionId ||
-        ''
+      const raw = r as unknown as {
+        code?: string
+        listingId?: string
+        promotionId?: string
+        used?: boolean
+      }
+      const promoId = raw.promotionId || ''
       if (promoId && !map[promoId]) {
         map[promoId] = {
           id: r.id,
-          code: r.getStringValue('code') || (r as unknown as { code?: string }).code || '',
-          listingId:
-            r.getStringValue('listingId') ||
-            (r as unknown as { listingId?: string }).listingId ||
-            '',
+          code: raw.code || '',
+          listingId: raw.listingId || '',
           promotionId: promoId,
-          used: r.getBoolValue?.('used') ?? (r as unknown as { used?: boolean }).used ?? false,
-          created: r.getStringValue('created') || r.created,
+          used: raw.used ?? false,
+          created: r.created,
         }
       }
     }

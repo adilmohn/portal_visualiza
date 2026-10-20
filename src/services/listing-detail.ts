@@ -95,10 +95,28 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
     // Direct SDK fallback
     try {
       const record = await pb.collection('listings').getOne(cleanId)
+      const rawListing = record as unknown as {
+        name?: string
+        type?: ListingType
+        description?: string
+        email?: string
+        phone?: string
+        whatsapp?: string
+        website?: string
+        cep?: string
+        address?: string
+        city?: string
+        state?: string
+        country?: string
+        zone?: string
+        neighborhood?: string
+        status?: ListingStatus
+        pinEnabled?: boolean
+        pinLat?: number
+        pinLng?: number
+      }
 
-      const listingStatus = (record.getStringValue('status') ||
-        (record as unknown as { status?: ListingStatus }).status ||
-        'pendente') as ListingStatus
+      const listingStatus = (rawListing.status || 'pendente') as ListingStatus
 
       if (listingStatus !== 'aprovado') {
         throw new ListingNotFoundError(
@@ -115,7 +133,8 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
         })
         photos = photoList
           .map((p) => {
-            const filename = p.getStringValue('url') || (p as unknown as { url?: string }).url || ''
+            const rawP = p as unknown as { url?: string }
+            const filename = rawP.url || ''
             return {
               id: p.id,
               filename,
@@ -144,11 +163,9 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
             sort: '-created',
           })
           for (const v of voucherList) {
-            const promoId =
-              v.getStringValue('promotionId') ||
-              (v as unknown as { promotionId?: string }).promotionId ||
-              ''
-            const code = v.getStringValue('code') || (v as unknown as { code?: string }).code || ''
+            const rawV = v as unknown as { promotionId?: string; code?: string }
+            const promoId = rawV.promotionId || ''
+            const code = rawV.code || ''
             if (promoId && code && !vouchersMap[promoId]) {
               vouchersMap[promoId] = code
             }
@@ -157,66 +174,47 @@ export async function getListingDetail(id: string): Promise<ListingDetail> {
           vouchersMap = {}
         }
 
-        promotions = promoList.map((pr) => ({
-          id: pr.id,
-          title: pr.getStringValue('title') || (pr as unknown as { title?: string }).title || '',
-          description:
-            pr.getStringValue('description') ||
-            (pr as unknown as { description?: string }).description ||
-            '',
-          active:
-            pr.getBoolValue?.('active') ?? (pr as unknown as { active?: boolean }).active ?? true,
-          created: pr.created,
-          voucherCode: vouchersMap[pr.id] || null,
-        }))
+        promotions = promoList.map((pr) => {
+          const rawPr = pr as unknown as {
+            title?: string
+            description?: string
+            active?: boolean
+          }
+          return {
+            id: pr.id,
+            title: rawPr.title || '',
+            description: rawPr.description || '',
+            active: rawPr.active ?? true,
+            created: pr.created,
+            voucherCode: vouchersMap[pr.id] || null,
+          }
+        })
       } catch (_) {
         promotions = []
       }
 
       return {
         id: record.id,
-        name: record.getStringValue('name') || (record as unknown as { name?: string }).name || '',
-        type: (record.getStringValue('type') ||
-          (record as unknown as { type?: ListingType }).type ||
-          'empresa') as ListingType,
-        description:
-          record.getStringValue('description') ||
-          (record as unknown as { description?: string }).description ||
-          '',
-        email:
-          record.getStringValue('email') || (record as unknown as { email?: string }).email || '',
-        phone: record.getStringValue('phone') || (record as unknown as { phone?: string }).phone,
-        whatsapp:
-          record.getStringValue('whatsapp') ||
-          (record as unknown as { whatsapp?: string }).whatsapp,
-        website:
-          record.getStringValue('website') || (record as unknown as { website?: string }).website,
-        cep: record.getStringValue('cep') || (record as unknown as { cep?: string }).cep || '',
-        address:
-          record.getStringValue('address') ||
-          (record as unknown as { address?: string }).address ||
-          '',
-        city: record.getStringValue('city') || (record as unknown as { city?: string }).city || '',
-        state:
-          record.getStringValue('state') || (record as unknown as { state?: string }).state || '',
-        country:
-          record.getStringValue('country') ||
-          (record as unknown as { country?: string }).country ||
-          'Brasil',
-        zone: record.getStringValue('zone') || (record as unknown as { zone?: string }).zone,
-        neighborhood:
-          record.getStringValue('neighborhood') ||
-          (record as unknown as { neighborhood?: string }).neighborhood,
+        name: rawListing.name || '',
+        type: (rawListing.type || 'empresa') as ListingType,
+        description: rawListing.description || '',
+        email: rawListing.email || '',
+        phone: rawListing.phone,
+        whatsapp: rawListing.whatsapp,
+        website: rawListing.website,
+        cep: rawListing.cep || '',
+        address: rawListing.address || '',
+        city: rawListing.city || '',
+        state: rawListing.state || '',
+        country: rawListing.country || 'Brasil',
+        zone: rawListing.zone,
+        neighborhood: rawListing.neighborhood,
         status: listingStatus,
-        pinEnabled:
-          record.getBoolValue?.('pinEnabled') ??
-          (record as unknown as { pinEnabled?: boolean }).pinEnabled,
-        pinLat:
-          record.getFloatValue?.('pinLat') ?? (record as unknown as { pinLat?: number }).pinLat,
-        pinLng:
-          record.getFloatValue?.('pinLng') ?? (record as unknown as { pinLng?: number }).pinLng,
-        created: record.getStringValue('created') || record.created,
-        updated: record.getStringValue('updated') || record.updated,
+        pinEnabled: rawListing.pinEnabled,
+        pinLat: rawListing.pinLat,
+        pinLng: rawListing.pinLng,
+        created: record.created,
+        updated: record.updated,
         photos,
         promotions,
       }
