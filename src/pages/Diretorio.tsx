@@ -15,6 +15,7 @@ import {
   Mail,
   Phone,
   MessageCircle,
+  Eye,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,7 +37,7 @@ import {
   getDirectoryLocations,
   GeoLocationOption,
 } from '@/services/listings'
-import { trackListingClick, formatCounterValue } from '@/services/counters'
+import { formatCounterValue } from '@/services/counters'
 import pb from '@/lib/pocketbase/client'
 
 const ALL_FILTER_VALUE = '__all__'
@@ -644,6 +645,8 @@ interface ListingCardProps {
 function ListingCard({ listing, onTrackContact }: ListingCardProps) {
   const typeConfig = TYPE_CONFIG[listing.type] || TYPE_CONFIG.empresa
   const TypeIcon = typeConfig.icon
+  // Contador de cliques do anúncio (leitura silenciosa; some se falhar)
+  const { clicks } = useListingClicks(listing.id)
 
   // Location display: Neighborhood + City/State or City/State
   const locationText = useMemo(() => {
@@ -705,9 +708,27 @@ function ListingCard({ listing, onTrackContact }: ListingCardProps) {
       </div>
 
       <CardHeader className="p-5 pb-2">
-        <h3 className="text-lg font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
-          {listing.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-lg font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
+            {listing.name}
+          </h3>
+          {clicks !== undefined && (
+            <span
+              className="ml-auto inline-flex shrink-0 items-center gap-1 text-[11px] font-medium text-muted-foreground"
+              title="Cliques neste anúncio"
+              aria-label={`Este anúncio recebeu ${
+                typeof clicks === 'number' ? formatCounterValue(clicks) : '—'
+              } cliques`}
+            >
+              <Eye className="h-3 w-3" aria-hidden="true" />
+              {clicks === null ? (
+                <Skeleton className="h-3 w-8" />
+              ) : (
+                <span>{formatCounterValue(clicks)}</span>
+              )}
+            </span>
+          )}
+        </div>
         <div className="flex items-center text-xs text-muted-foreground mt-1 gap-1.5">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span className="truncate">{locationText}</span>

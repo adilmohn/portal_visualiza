@@ -5,52 +5,61 @@
 //   - "portal_visits"                  : total visits to the site
 //   - "listing_clicks:<listingId>"     : clicks/opens per listing (ad frames)
 //
+// IMPORTANT (PocketBase JSVM): callbacks execute in a separate VM pool, so ALL
+// logic lives inline inside each callback body — no top-level helper functions
+// or constants referenced from within a callback.
+//
 // Writes happen ONLY here (server-side); the "counters" collection has no
-// public create/update rules. Frontend failures are silent and non-blocking.
+// public create/update rules. Frontend calls are fire-and-forget and silent.
 
-const PORTAL_VISITS_KEY = 'portal_visits'
-const LISTING_CLICKS_PREFIX = 'listing_clicks:'
+// ---- POST /backend/v1/events/counter --------------------------------------
+routerAdd('POST', '/backend/v1/events/counter', (e) => {
+  const PORTAL_VISITS_KEY = 'portal_visits'
+  const LISTING_CLICKS_PREFIX = 'listing_clicks:'
 
-function findCounterByKey(key) {
-  try {
-    return $app.findFirstRecordByData('counters', 'key', key)
-  } catch (_) {
-    return null
+  // Find an existing counter record by key; null when it does not exist yet
+  const findCounterByKey = (key) => {
+    try {
+      return $app.findFirstRecordByData('counters', 'key', key)
+    } catch (_) {
+      return null
+    }
   }
-}
 
-function incrementCounter(key, min = 1) {
-  let record = findCounterByKey(key)
-  if (!record) {
-    // Idempotent creation on first use (unique index guards against races)
+  // Ensure the counter record exists (idempotent; unique index guards races)
+  const ensureCounter = (key) => {
+    let record = findCounterByKey(key)
+    if (record) return record
+
     try {
       const col = $app.findCollectionByNameOrId('counters')
       record = new Record(col)
       record.set('key', key)
       record.set('value', 0)
       $app.save(record)
+      return record
     } catch (_) {
       // Lost a creation race: re-read the winner's record
-      record = findCounterByKey(key)
-      if (!record) throw new Error('Falha ao criar contador.')
+      const winner = findCounterByKey(key)
+      if (!winner) throw new Error('Falha ao criar contador.')
+      return winner
     }
   }
 
-  // Atomic SQL increment to avoid read-modify-write race conditions
-  const result = $app
-    .db()
-    .newQuery(
-      'UPDATE counters SET value = COALESCE(value, 0) + 1, updated = {:now} WHERE key = {:key}',
-    )
-    .bind({ key: key, now: new Date().toISOString() })
-    .execute()
-  // Re-read the authoritative value after the atomic UPDATE
-  const fresh = findCounterByKey(key)
-  return fresh ? fresh.getInt('value', 0) : result && result.rowsAffected() ? 1 : 0
-}
+  // Atomic SQL increment, then re-read the authoritative value
+  const incrementCounter = (key) => {
+    ensureCounter(key)
+    $app
+      .db()
+      .newQuery(
+        'UPDATE counters SET value = COALESCE(value, 0) + 1, updated = {:now} WHERE key = {:key}',
+      )
+      .bind({ key: key, now: new Date().toISOString() })
+      .execute()
+    const fresh = findCounterByKey(key)
+    return fresh ? fresh.getInt('value', 0) : 0
+  }
 
-// ---- POST /backend/v1/events/counter --------------------------------------
-routerAdd('POST', '/backend/v1/events/counter', (e) => {
   try {
     const body = e.requestInfo().body || {}
     const scope = (body.scope || '').trim()
@@ -83,31 +92,43 @@ routerAdd('POST', '/backend/v1/events/counter', (e) => {
 
 // ---- GET /backend/v1/counters ---------------------------------------------
 routerAdd('GET', '/backend/v1/counters', (e) => {
+  const PORTAL_VISITS_KEY = 'portal_visits'
+
+  const loadValue = (key) => {
+    try {
+      const record = $app.findFirstRecordByData('counters', 'key', key)
+      return record ? record.getInt('value', 0) : 0
+    } catch (_) {
+      return 0
+    }
+  }
+
   try {
     const q = e.requestInfo().query || {}
     const keysParam = (q.key || '').trim()
 
-    const loadValue = (key) => {
-      const record = findCounterByKey(key)
-      return record ? record.getInt('value', 0) : 0
-    }
-
     if (keysParam) {
-      // Single key or comma-separated list
+      // Single key or comma-separated list (max 20 keys per request)
       const keys = keysParam
         .split(',')
         .map((k) => k.trim())
         .filter(Boolean)
         .slice(0, 20)
-      const result = {}
+      const values = {}
       keys.forEach((k) => {
-        result[k] = loadValue(k)
+        values[k] = loadValue(k)
       })
-      return e.json(200, { values: result })
+      return e.json(200, { values: values })
     }
 
     // No key: return the global portal visits total
-    return e.json(200, { values: { [PORTAL_VISITS_KEY]: loadValue(PORTAL_VISITS_KEY) } })
+    return e.json(200, {
+      values: (() => {
+        const v = {}
+        v[PORTAL_VISITS_KEY] = loadValue(PORTAL_VISITS_KEY)
+        return v
+      })(),
+    })
   } catch (err) {
     return e.json(500, { message: 'Falha ao carregar os contadores.' })
   }
