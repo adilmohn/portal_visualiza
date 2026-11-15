@@ -29,12 +29,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useListingSearch } from '@/hooks/use-listing-search'
+import { useListingClicks } from '@/hooks/use-listing-clicks'
 import {
   ListingType,
   ListingItem,
   getDirectoryLocations,
   GeoLocationOption,
 } from '@/services/listings'
+import { trackListingClick, formatCounterValue } from '@/services/counters'
 import pb from '@/lib/pocketbase/client'
 
 const ALL_FILTER_VALUE = '__all__'

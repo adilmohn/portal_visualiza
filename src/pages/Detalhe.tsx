@@ -45,8 +45,11 @@ import {
 } from '@/components/ui/dialog'
 import { useListingDetail } from '@/hooks/use-listing-detail'
 import { useListingReviews } from '@/hooks/use-reviews'
+import { useListingClicks } from '@/hooks/use-listing-clicks'
 import pb from '@/lib/pocketbase/client'
 import { recordContactEvent, ContactChannel, ListingPhoto } from '@/services/listing-detail'
+import { trackListingClick, formatCounterValue } from '@/services/counters'
+import { Eye } from 'lucide-react'
 import { ListingType } from '@/services/listings'
 import { toast } from '@/hooks/use-toast'
 
@@ -245,6 +248,12 @@ export default function Detalhe() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: listing, isLoading, isNotFound, isError, refetch } = useListingDetail(id)
+  const { clicks } = useListingClicks(id)
+
+  // Contador de cliques do anúncio: incrementa uma vez por sessão, fire-and-forget
+  useEffect(() => {
+    if (id) trackListingClick(id)
+  }, [id])
   const {
     reviews,
     totalReviews,
@@ -1139,6 +1148,23 @@ export default function Detalhe() {
                   />
                 </Button>
               ) : null}
+
+              {/* Contador de cliques do anúncio — ao lado dos botões de contato */}
+              <div
+                className="flex items-center justify-end gap-1.5 pt-1 text-xs text-muted-foreground"
+                aria-label={`Este anúncio recebeu ${
+                  typeof clicks === 'number' ? formatCounterValue(clicks) : '—'
+                } cliques`}
+              >
+                <Eye className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+                {clicks === null ? (
+                  <Skeleton className="h-3.5 w-14" />
+                ) : typeof clicks === 'number' ? (
+                  <span>
+                    {formatCounterValue(clicks)} {clicks === 1 ? 'clique' : 'cliques'}
+                  </span>
+                ) : null}
+              </div>
 
               {/* Security & Verification note */}
               <div className="pt-4 border-t text-xs text-muted-foreground space-y-1">

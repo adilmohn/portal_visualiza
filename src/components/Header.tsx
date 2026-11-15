@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { Sun, Moon, LogIn, LogOut, ShieldCheck, User } from 'lucide-react'
+import { Sun, Moon, LogIn, LogOut, ShieldCheck, User, Eye } from 'lucide-react'
 import { useTheme } from '@/hooks/use-theme'
 import { useAuth } from '@/hooks/use-auth'
+import { usePortalVisits } from '@/hooks/use-portal-visits'
+import { trackPortalVisit, formatCounterValue } from '@/services/counters'
 import { Button } from '@/components/ui/button'
 
 export function Header() {
   const { theme, toggleTheme } = useTheme()
   const { user, isAuthenticated, signOut, role } = useAuth()
+  const { visits } = usePortalVisits()
   const [isScrolled, setIsScrolled] = useState(false)
+
+  // Contador global de visitas: incrementa uma vez por sessão, fire-and-forget
+  useEffect(() => {
+    trackPortalVisit()
+  }, [])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,8 +106,18 @@ export function Header() {
           </NavLink>
         </nav>
 
-        {/* Right: Dark mode toggle + Auth buttons */}
+        {/* Right: Portal visit counter + Dark mode toggle + Auth buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Contador de visitas do portal (global, discreto) */}
+          <span
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-muted/50 px-2 py-1 text-xs font-medium text-muted-foreground"
+            aria-label="Total de visitas ao portal"
+            title="Total de visitas ao portal"
+          >
+            <Eye className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+            <span>{visits === null ? '…' : formatCounterValue(visits)}</span>
+          </span>
+
           <Button
             type="button"
             variant="ghost"
