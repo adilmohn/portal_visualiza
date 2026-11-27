@@ -63,21 +63,43 @@ export async function getPortalVisits(): Promise<number> {
 }
 
 /**
+ * Envia o incremento ao hook /backend/v1/events/counter via POST.
+ * Marca a sessão APENAS depois de uma resposta 2xx: se o pedido falhar,
+ * a próxima página carregada na mesma sessão tenta novamente.
+ * Fire-and-forget: nunca lança.
+ */
+async function trackCounter(scope: 'portal' | 'listing', listingId?: string): Promise<void> {
+  const counted =
+    scope === 'portal' ? wasCountedInSession('portal') : wasCountedInSession('listing', listingId)
+  if (counted) return
+  try {
+    const res = await fetch(`${pb.buildURL('')}/backend/v1/events/counter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(
+        scope === 'portal' ? { scope: 'portal' } : { scope: 'listing', listingId },
+      ),
+    })
+    if (!res.ok) {
+      console.warn('Contador: falha ao registrar evento (status ' + res.status + ')')
+      return
+    }
+    if (scope === 'portal') {
+      markCountedInSession('portal')
+    } else {
+      markCountedInSession('listing', listingId)
+    }
+  } catch (_) {
+    console.warn('Contador: não foi possível registrar o evento')
+  }
+}
+
+/**
  * Incrementa o contador global de visitas do portal (uma vez por sessão).
  * Fire-and-forget: nunca lança.
  */
 export function trackPortalVisit(): void {
-  if (wasCountedInSession('portal')) return
-  markCountedInSession('portal')
-  try {
-    fetch(`${pb.buildURL('')}/backend/v1/events/counter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'portal' }),
-    }).catch(() => {})
-  } catch (_) {
-    // silencioso
-  }
+  void trackCounter('portal')
 }
 
 /**
@@ -86,17 +108,7 @@ export function trackPortalVisit(): void {
  */
 export function trackListingClick(listingId: string): void {
   if (!listingId) return
-  if (wasCountedInSession('listing', listingId)) return
-  markCountedInSession('listing', listingId)
-  try {
-    fetch(`${pb.buildURL('')}/backend/v1/events/counter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'listing', listingId }),
-    }).catch(() => {})
-  } catch (_) {
-    // silencioso
-  }
+  void trackCounter('listing', listingId)
 }
 
 /** Formata um número no padrão pt-BR (ex.: 1.234). */
