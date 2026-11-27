@@ -1,40 +1,24 @@
 /// <reference path="../pb_data/types.d.ts" />
-// POST /backend/v1/ads/click — público. body {saleId} obrigatório.
-// Incrementa clicks em 1 e retorna targetUrl (string vazia se não houver).
-// 204 silencioso se a venda não existir. Lógica INLINE no callback (JSVM).
-
+// POST /backend/v1/ads/click — público, body { saleId } obrigatório.
+// Incrementa clicks em 1 e retorna targetUrl quando houver, senão string vazia.
+// 204 silencioso se a venda não existir. Nunca retorna advertiserEmail.
+// Padrão JSVM: toda a lógica INLINE no corpo do callback (VM pool — sem helpers de nível superior).
 routerAdd('POST', '/backend/v1/ads/click', (e) => {
+  const info = $apis.requestInfo(e)
+  const data = info.body || {}
+
+  const saleId = String(data.saleId || '').trim()
+  if (!saleId) {
+    return e.json(400, { error: 'saleId obrigatorio.' })
+  }
+
   try {
-    const body = $apis.requestInfo(e).body
-    const saleId = (body && body.saleId ? String(body.saleId) : '').trim()
-
-    if (!saleId) {
-      e.json(400, { error: 'saleId é obrigatório.' })
-      return
-    }
-
-    let sale = null
-    try {
-      sale = $app.findRecordById('sales', saleId)
-    } catch (_) {
-      sale = null
-    }
-
-    if (!sale) {
-      e.json(204, {})
-      return
-    }
-
-    const current = sale.getInt('clicks')
-    sale.set('clicks', current + 1)
+    const sale = $app.findRecordById('sales', saleId)
+    sale.set('clicks', (sale.getInt('clicks') || 0) + 1)
     $app.save(sale)
-
-    e.json(200, {
-      success: true,
-      clicks: current + 1,
-      targetUrl: sale.getString('targetUrl') || '',
-    })
+    return e.json(200, { targetUrl: String(sale.getString('targetUrl') || '') })
   } catch (err) {
-    e.json(500, { error: 'Não foi possível registrar o clique.' })
+    // venda inexistente ou erro: resposta silenciosa
+    return e.noContent(204)
   }
 })
