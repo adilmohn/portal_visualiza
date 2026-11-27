@@ -102,6 +102,65 @@ routerAdd(
       voucher.set('used', false)
       $app.save(voucher)
 
+      // 6. E-mail ao dono do anúncio com o código gerado (não-bloqueante).
+      // Toda a lógica SMTP fica INLINE neste callback (regra do JSVM: nada de
+      // helpers de nível superior). Falha de envio não quebra a operação.
+      try {
+        let ownerEmail = listing.getString('email')
+        try {
+          const owner = $app.findRecordById('users', listing.getString('userId'))
+          const ue = owner.email()
+          if (ue) ownerEmail = ue
+        } catch (_) {}
+
+        if (ownerEmail) {
+          const listingName = listing.getString('name') || 'seu anúncio'
+          const code = voucher.getString('code')
+          const settings = $app.settings()
+          $app.newMailClient().send(
+            new MailerMessage({
+              from: {
+                address: settings.meta.senderAddress || 'cadastro@viabilizeseuconcurso.com.br',
+                name: settings.meta.senderName || 'Portal Viabilize',
+              },
+              to: [{ address: ownerEmail }],
+              subject: 'Seu voucher foi gerado!',
+              html:
+                '<div style="font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.6;">' +
+                '<h2 style="margin:0 0 12px;">Seu voucher foi gerado!</h2>' +
+                '<p>Olá!</p>' +
+                '<p>O voucher da promoção do anúncio <strong>' +
+                listingName +
+                '</strong> foi gerado com sucesso.</p>' +
+                '<p style="font-size:20px;font-weight:bold;letter-spacing:1px;">' +
+                code +
+                '</p>' +
+                '<p>Compartilhe este código com seus clientes para que eles aproveitem a promoção.</p>' +
+                '<p>Atenciosamente,<br/><strong>Portal Viabilize</strong></p>' +
+                '</div>',
+              text:
+                'Seu voucher foi gerado!\n\n' +
+                'O voucher da promoção do anúncio ' +
+                listingName +
+                ' foi gerado com sucesso.\n' +
+                'Código: ' +
+                code +
+                '\n\n' +
+                'Compartilhe este código com seus clientes para que eles aproveitem a promoção.\n\n' +
+                'Atenciosamente,\nPortal Viabilize',
+            }),
+          )
+          console.log('[vouchers generate] E-mail de voucher enviado para ' + ownerEmail)
+        } else {
+          console.warn('[vouchers generate] E-mail do dono ausente — e-mail não enviado.')
+        }
+      } catch (mailErr) {
+        console.error(
+          '[vouchers generate] Falha ao enviar e-mail de voucher (operação não afetada):',
+          mailErr,
+        )
+      }
+
       return e.json(201, {
         success: true,
         id: voucher.id,

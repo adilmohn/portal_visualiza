@@ -54,61 +54,7 @@ onRecordCreateRequest((e) => {
   e.next()
 }, 'reviews')
 
-// Administrative moderation endpoints for reviews (since updateRule is locked null)
-// POST /backend/v1/admin/reviews/:id/approve
-routerAdd(
-  'POST',
-  '/backend/v1/admin/reviews/{id}/approve',
-  (e) => {
-    try {
-      const authRecord = e.auth || e.requestInfo().auth
-      if (!authRecord || authRecord.getString('role') !== 'admin') {
-        return e.json(403, { message: 'Acesso negado. Apenas administradores.' })
-      }
-
-      const reviewId = e.request.pathValue('id')
-      if (!reviewId) {
-        return e.json(400, { message: 'ID da avaliação é obrigatório.' })
-      }
-
-      let review
-      try {
-        review = $app.findRecordById('reviews', reviewId)
-      } catch (_) {
-        return e.json(404, { message: 'Avaliação não encontrada.' })
-      }
-
-      review.set('status', 'aprovado')
-      $app.save(review)
-
-      // Audit log
-      try {
-        const auditCol = $app.findCollectionByNameOrId('auditLog')
-        const log = new Record(auditCol)
-        log.set('adminId', authRecord.id)
-        log.set('action', 'approve_review')
-        log.set('targetId', reviewId)
-        log.set('reason', 'Avaliação aprovada pelo moderador')
-        $app.save(log)
-      } catch (logErr) {
-        console.warn('Falha ao registrar auditoria de aprovação de review:', logErr)
-      }
-
-      return e.json(200, {
-        success: true,
-        id: review.id,
-        status: review.getString('status'),
-      })
-    } catch (err) {
-      return e.json(500, {
-        message: 'Erro interno ao aprovar avaliação.',
-        error: err ? err.message : '',
-      })
-    }
-  },
-  $apis.requireAuth(),
-)
-
+// Aprovação de reviews mudou para moderation_emails.js (com envio de e-mail ao autor).
 // POST /backend/v1/admin/reviews/:id/reject
 routerAdd(
   'POST',
