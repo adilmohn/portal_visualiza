@@ -22,50 +22,51 @@ routerAdd('POST', '/backend/v1/events/counter', (e) => {
   const PORTAL_VISITS_KEY = 'portal_visits'
   const LISTING_CLICKS_PREFIX = 'listing_clicks:'
 
-  // Find an existing counter record by key; null when it does not exist yet
-  const findCounterByKey = (key) => {
-    try {
-      return $app.findFirstRecordByData('counters', 'key', key)
-    } catch (_) {
-      return null
-    }
-  }
-
-  // Ensure the counter record exists (idempotent; unique index guards races)
-  const ensureCounter = (key) => {
-    let record = findCounterByKey(key)
-    if (record) return record
-
-    try {
-      const col = $app.findCollectionByNameOrId('counters')
-      record = new Record(col)
-      record.set('key', key)
-      record.set('value', 0)
-      $app.save(record)
-      return record
-    } catch (_) {
-      // Lost a creation race: re-read the winner's record
-      const winner = findCounterByKey(key)
-      if (!winner) throw new Error('Falha ao criar contador.')
-      return winner
-    }
-  }
-
-  // Atomic SQL increment, then re-read the authoritative value
-  const incrementCounter = (key) => {
-    ensureCounter(key)
-    // The "counters" collection has no "updated" column (migration 0011 defines
-    // only key + value) — touching it was failing the whole UPDATE with a 500.
-    $app
-      .db()
-      .newQuery('UPDATE counters SET value = COALESCE(value, 0) + 1 WHERE key = {:key}')
-      .bind({ key: key })
-      .execute()
-    const fresh = findCounterByKey(key)
-    return fresh ? fresh.getInt('value', 0) : 0
-  }
   try {
     const body = e.requestInfo().body || {}
+
+    const findCounterByKey = (key) => {
+      try {
+        return $app.findFirstRecordByData('counters', 'key', key)
+      } catch (_) {
+        return null
+      }
+    }
+
+    // Ensure the counter record exists (idempotent; unique index guards races)
+    const ensureCounter = (key) => {
+      let record = findCounterByKey(key)
+      if (record) return record
+
+      try {
+        const col = $app.findCollectionByNameOrId('counters')
+        record = new Record(col)
+        record.set('key', key)
+        record.set('value', 0)
+        $app.save(record)
+        return record
+      } catch (_) {
+        // Lost a creation race: re-read the winner's record
+        const winner = findCounterByKey(key)
+        if (!winner) throw new Error('Falha ao criar contador.')
+        return winner
+      }
+    }
+
+    // Atomic SQL increment, then re-read the authoritative value
+    const incrementCounter = (key) => {
+      ensureCounter(key)
+      // The "counters" collection has no "updated" column (migration 0011 defines
+      // only key + value) — touching it was failing the whole UPDATE with a 500.
+      $app
+        .db()
+        .newQuery('UPDATE counters SET value = COALESCE(value, 0) + 1 WHERE key = {:key}')
+        .bind({ key: key })
+        .execute()
+      const fresh = findCounterByKey(key)
+      return fresh ? fresh.getInt('value', 0) : 0
+    }
+
     const scope = (body.scope || '').trim()
 
     if (scope === 'portal') {
@@ -96,18 +97,18 @@ routerAdd('POST', '/backend/v1/events/counter', (e) => {
 
 // ---- GET /backend/v1/counters ---------------------------------------------
 routerAdd('GET', '/backend/v1/counters', (e) => {
-  const PORTAL_VISITS_KEY = 'portal_visits'
-
-  const loadValue = (key) => {
-    try {
-      const record = $app.findFirstRecordByData('counters', 'key', key)
-      return record ? record.getInt('value', 0) : 0
-    } catch (_) {
-      return 0
-    }
-  }
-
   try {
+    const PORTAL_VISITS_KEY = 'portal_visits'
+
+    const loadValue = (key) => {
+      try {
+        const record = $app.findFirstRecordByData('counters', 'key', key)
+        return record ? record.getInt('value', 0) : 0
+      } catch (_) {
+        return 0
+      }
+    }
+
     const q = e.requestInfo().query || {}
     const keysParam = (q.key || '').trim()
 

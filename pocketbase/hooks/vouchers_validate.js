@@ -55,7 +55,7 @@ routerAdd('POST', '/backend/v1/vouchers/validate', (e) => {
         alreadyUsed: true,
         message: 'Este voucher já foi utilizado anteriormente.',
         voucher: {
-          id: voucher.getId(),
+          id: voucher.id,
           code: voucher.getString('code'),
           used: true,
           usedAt: voucher.getString('usedAt'),
@@ -87,7 +87,7 @@ routerAdd('POST', '/backend/v1/vouchers/validate', (e) => {
       alreadyUsed: false,
       message: 'Voucher validado e marcado como utilizado com sucesso.',
       voucher: {
-        id: voucher.getId(),
+        id: voucher.id,
         code: voucher.getString('code'),
         used: true,
         usedAt: voucher.getString('usedAt'),

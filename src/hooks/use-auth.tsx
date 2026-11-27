@@ -36,6 +36,12 @@ interface AuthContextValue {
   signUp: (data: SignUpData) => Promise<{ success: boolean; error?: string }>
   signOut: () => void
   refreshUser: () => Promise<void>
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>
+  confirmPasswordReset: (params: {
+    token: string
+    newPassword: string
+    newPasswordConfirm: string
+  }) => Promise<{ success: boolean; error?: string }>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -156,6 +162,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  // Solicita o e-mail de redefinição de senha. A resposta é sempre neutra:
+  // nunca revela se o e-mail existe ou não na base.
+  const requestPasswordReset = async (
+    email: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await pb.collection('users').requestPasswordReset(email.trim())
+      return { success: true }
+    } catch (err) {
+      // 404 (e-mail inexistente) e erros de rede recebem a mesma resposta neutra,
+      // para não permitir enumeração de contas.
+      console.warn('Solicitação de redefinição de senha:', err)
+      return { success: true }
+    }
+  }
+
+  // Confirma a redefinição com o token recebido por e-mail (query params da rota).
+  const confirmPasswordReset = async (params: {
+    token: string
+    newPassword: string
+    newPasswordConfirm: string
+  }): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await pb
+        .collection('users')
+        .confirmPasswordReset(params.token, params.newPassword, params.newPasswordConfirm)
+      return { success: true }
+    } catch (err) {
+      const message = getErrorMessage(err)
+      return {
+        success: false,
+        error: message || 'Não foi possível redefinir a senha. Solicite um novo link.',
+      }
+    }
+  }
+
   const refreshUser = async () => {
     try {
       if (pb.authStore.isValid) {
@@ -177,8 +219,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signOut,
       refreshUser,
+      requestPasswordReset,
+      confirmPasswordReset,
     }),
-    [user, isLoading],
+    [
+      user,
+      isLoading,
+      signIn,
+      signUp,
+      signOut,
+      refreshUser,
+      requestPasswordReset,
+      confirmPasswordReset,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

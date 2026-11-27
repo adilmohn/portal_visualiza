@@ -367,7 +367,7 @@ export default function Cadastro() {
         phone: phone.trim() || undefined,
         whatsapp: whatsapp.trim() || undefined,
         website: website.trim() || undefined,
-        cep: cep.replace(/\D/g, ''),
+        cep: cep.replace(/^(\d{5})(\d{3})$/, '$1-$2'),
         address: address.trim(),
         city: city.trim(),
         state: state.trim().toUpperCase(),

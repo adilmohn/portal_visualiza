@@ -31,7 +31,7 @@ cronAdd('encerrar_vendas_expiradas', '0 4 * * *', () => {
         $app.save(sale)
         closedSales++
       } catch (saleErr) {
-        errors.push('sale ' + sale.getId() + ': ' + saleErr)
+        errors.push('sale ' + sale.id + ': ' + saleErr)
       }
     }
   } catch (qErr) {
@@ -54,7 +54,7 @@ cronAdd('encerrar_vendas_expiradas', '0 4 * * *', () => {
         $app.save(promo)
         deactivatedPromos++
       } catch (promoErr) {
-        errors.push('promo ' + promo.getId() + ': ' + promoErr)
+        errors.push('promo ' + promo.id + ': ' + promoErr)
       }
     }
   } catch (qErr2) {

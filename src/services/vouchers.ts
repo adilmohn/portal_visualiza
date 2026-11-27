@@ -143,6 +143,30 @@ export async function generateVoucher(
   })
 }
 
+export interface ValidateVoucherResponse {
+  success: boolean
+  alreadyUsed?: boolean
+  message?: string
+  error?: string
+  voucher?: {
+    id: string
+    code: string
+    used: boolean
+    usedAt?: string
+  }
+}
+
+/**
+ * Marca um voucher como utilizado via POST /backend/v1/vouchers/validate
+ * (idempotente: código já usado responde alreadyUsed=true).
+ */
+export async function validateVoucher(code: string): Promise<ValidateVoucherResponse> {
+  return await pb.send<ValidateVoucherResponse>('/backend/v1/vouchers/validate', {
+    method: 'POST',
+    body: { code: code.trim().toUpperCase() },
+  })
+}
+
 /**
  * Lists vouchers for a given listing or all user vouchers
  */

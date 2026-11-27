@@ -41,6 +41,7 @@ export default function App() {
                     <Route path="/diretorio" element={<Diretorio />} />
                     <Route path="/detalhe/:id" element={<Detalhe />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/redefinir-senha" element={<Login />} />
                     <Route path="/cadastro" element={<Cadastro />} />
                     <Route path="/sobre" element={<Sobre />} />
                     <Route path="/privacidade" element={<Privacidade />} />
