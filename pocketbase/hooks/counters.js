@@ -9,8 +9,13 @@
 // logic lives inline inside each callback body — no top-level helper functions
 // or constants referenced from within a callback.
 //
-// Writes happen ONLY here (server-side); the "counters" collection has no
-// public create/update rules. Frontend calls are fire-and-forget and silent.
+// Writes happen ONLY here (server-side); the "counters" table has no public
+// create/update rules. Frontend calls are fire-and-forget and silent.
+//
+// NOTE: the "counters" table has only (id, key, value, created, updated — the
+// autodate columns PocketBase manages itself). Do NOT set "updated" manually in
+// raw SQL: the autodate column is managed by PocketBase and a manual UPDATE of
+// it makes the statement fail (this was the cause of the 500s on this route).
 
 // ---- POST /backend/v1/events/counter --------------------------------------
 routerAdd('POST', '/backend/v1/events/counter', (e) => {
@@ -49,17 +54,16 @@ routerAdd('POST', '/backend/v1/events/counter', (e) => {
   // Atomic SQL increment, then re-read the authoritative value
   const incrementCounter = (key) => {
     ensureCounter(key)
+    // The "counters" collection has no "updated" column (migration 0011 defines
+    // only key + value) — touching it was failing the whole UPDATE with a 500.
     $app
       .db()
-      .newQuery(
-        'UPDATE counters SET value = COALESCE(value, 0) + 1, updated = {:now} WHERE key = {:key}',
-      )
-      .bind({ key: key, now: new Date().toISOString() })
+      .newQuery('UPDATE counters SET value = COALESCE(value, 0) + 1 WHERE key = {:key}')
+      .bind({ key: key })
       .execute()
     const fresh = findCounterByKey(key)
     return fresh ? fresh.getInt('value', 0) : 0
   }
-
   try {
     const body = e.requestInfo().body || {}
     const scope = (body.scope || '').trim()
