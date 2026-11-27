@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from '@/hooks/use-toast'
 import { ListingModal } from '@/components/ListingModal'
+import { VouchersSection } from '@/components/VouchersSection'
 import { Pencil, Star } from 'lucide-react'
 
 export function Area() {
@@ -590,6 +591,11 @@ export function Area() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Meus Vouchers */}
+      <div className="pt-4 border-t border-border">
+        <VouchersSection />
       </div>
       {/* Modal for Creating / Editing Listing */}
       <ListingModal
