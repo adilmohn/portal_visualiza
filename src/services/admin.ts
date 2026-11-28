@@ -4,11 +4,14 @@ import type { ListingPhoto } from '@/services/listing-detail'
 
 export type AdminActionType = 'approve' | 'reject' | 'deactivate'
 
+export type ListingAiStatus = 'manual_review_required' | 'ia_indisponivel' | ''
+
 export interface AdminListingItem extends ListingItem {
   userId: string
   rejectedReason?: string
   aiVerdict?: AiVerdict
   aiReason?: string
+  aiStatus?: ListingAiStatus
   photos: ListingPhoto[]
 }
 
@@ -83,6 +86,7 @@ function mapRecordToAdminListing(
     rejectedReason: getString('rejectedReason') || undefined,
     aiVerdict: (getString('aiVerdict') as AiVerdict) || undefined,
     aiReason: getString('rejectedReason') || undefined,
+    aiStatus: (getString('aiStatus') as ListingAiStatus) || undefined,
     pinEnabled: getBool('pinEnabled'),
     pinLat: getNumber('pinLat'),
     pinLng: getNumber('pinLng'),
@@ -220,6 +224,7 @@ export async function recordAuditAction(params: {
   action: AdminActionType | string
   targetId: string
   reason?: string
+  manualReview?: boolean
 }): Promise<void> {
   const adminId = pb.authStore.record?.id
   if (!adminId) {
@@ -231,6 +236,7 @@ export async function recordAuditAction(params: {
     action: params.action,
     targetId: params.targetId,
     reason: params.reason || '',
+    manualReview: params.manualReview === true,
   })
 }
 
@@ -253,6 +259,35 @@ export async function approveListing(listingId: string): Promise<void> {
     })
   } catch (auditErr) {
     console.error('Falha ao registrar auditoria de aprovação:', auditErr)
+  }
+}
+
+/**
+ * Approves a listing whose AI verdict was "duvidoso" (or whose AI validation
+ * never ran — key missing), after the admin confirmed a manual review.
+ * Logs action "aprovacao_revisao_manual" with manualReview=true and the
+ * reason the AI gave for the flag.
+ */
+export async function approveListingWithManualReview(
+  listingId: string,
+  reason?: string,
+): Promise<void> {
+  if (!listingId) throw new Error('ID do anúncio é obrigatório.')
+
+  await pb.collection('listings').update(listingId, {
+    status: 'aprovado',
+    rejectedReason: '',
+  })
+
+  try {
+    await recordAuditAction({
+      action: 'aprovacao_revisao_manual',
+      targetId: listingId,
+      reason: reason || undefined,
+      manualReview: true,
+    })
+  } catch (auditErr) {
+    console.error('Falha ao registrar auditoria de aprovação com revisão manual:', auditErr)
   }
 }
 

@@ -23,9 +23,12 @@ import {
   ShieldAlert,
   Sparkles,
   AlertTriangle,
+  Ban,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -45,6 +48,8 @@ import { useAdminQueue } from '@/hooks/use-admin-queue'
 import { useAdminMetrics } from '@/hooks/use-admin-metrics'
 import { useAdminReviews } from '@/hooks/use-admin-reviews'
 import { AdminMonetization } from '@/components/admin/AdminMonetization'
+import { useValidationHealth } from '@/hooks/use-validation-health'
+import { toast as sonnerToast } from 'sonner'
 import type { AdminListingItem } from '@/services/admin'
 import type { ListingType } from '@/services/listings'
 
@@ -76,6 +81,7 @@ export default function Admin() {
     handleApprove,
     handleReject,
     handleDeactivate,
+    setManualReviewReason,
   } = useAdminQueue()
 
   const {
@@ -112,6 +118,17 @@ export default function Admin() {
 
   // Search filter for approved listings
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Saude da IA: chamado uma vez na montagem, cacheado durante a visita, sem polling
+  const {
+    configured,
+    missing: aiKeyMissing,
+    revalidate: revalidateAiHealth,
+  } = useValidationHealth()
+  const [aiBannerDismissed, setAiBannerDismissed] = useState(false)
+
+  // Checkbox "Revisei manualmente" por anuncio duvidoso (keyed por listing id)
+  const [manualReviewChecked, setManualReviewChecked] = useState<Record<string, boolean>>({})
 
   const handleOpenReject = (listing: AdminListingItem) => {
     setRejectTarget(listing)
@@ -162,6 +179,26 @@ export default function Admin() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     refetchApproved(1, searchTerm)
+  }
+
+  const showAiBanner = aiKeyMissing && !aiBannerDismissed
+  const isFallbackDuvidoso = (item: AdminListingItem) =>
+    item.aiVerdict === 'duvidoso' && aiKeyMissing
+  const requiresManualReview = (item: AdminListingItem) =>
+    item.aiVerdict === 'duvidoso' || item.aiVerdict === 'reprovado' || isFallbackDuvidoso(item)
+  const isManualReviewConfirmed = (item: AdminListingItem) => manualReviewChecked[item.id] === true
+
+  // Registra o motivo da IA no hook de fila, para gravar no auditLog na aprovacao com revisao manual
+  const handleManualReviewToggle = (item: AdminListingItem, checked: boolean) => {
+    setManualReviewChecked((prev) => ({ ...prev, [item.id]: checked }))
+    setManualReviewReason(
+      item.id,
+      checked
+        ? `Revisão manual confirmada pelo admin. Veredito da IA: ${
+            isFallbackDuvidoso(item) ? 'fallback (IA indisponível)' : item.aiVerdict
+          }.${item.aiReason ? ` Motivo: ${item.aiReason}` : ''}`
+        : '',
+    )
   }
 
   const handlePageChange = (newPage: number) => {
@@ -306,6 +343,50 @@ export default function Admin() {
         </Card>
       </div>
 
+      {/* Banner de IA indisponível (persistente no topo da fila, dispensável na sessão) */}
+      {showAiBanner && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40"
+        >
+          <AlertTriangle
+            className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <div className="flex-1 space-y-0.5">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Validação por IA indisponível
+            </p>
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              A chave do agente não está configurada. Todos os cadastros estão recebendo o veredito
+              de fallback.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => revalidateAiHealth()}
+              disabled={configured === null}
+              className="min-h-[44px] sm:min-h-[36px] border-amber-400 text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/40 focus-visible:ring-2"
+              aria-label="Revalidar configuração da IA"
+            >
+              <RefreshCw className="h-4 w-4 mr-1" aria-hidden="true" />
+              <span>Revalidar</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setAiBannerDismissed(true)}
+              className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 focus-visible:ring-2"
+              aria-label="Fechar aviso"
+            >
+              <XCircle className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs: Fila de Moderação, Avaliações, Anúncios Aprovados, Monetização, Auditoria */}
       <Tabs defaultValue="queue" className="space-y-6">
         <TabsList className="grid grid-cols-2 sm:grid-cols-5 max-w-3xl h-auto sm:h-12 p-1 bg-muted gap-1">
@@ -430,7 +511,15 @@ export default function Admin() {
                             </Badge>
 
                             {/* Badge do Veredito da IA */}
-                            {item.aiVerdict === 'duvidoso' ? (
+                            {isFallbackDuvidoso(item) ? (
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-semibold bg-violet-500/15 text-violet-800 dark:text-violet-300 border-violet-400 shadow-sm flex items-center gap-1"
+                              >
+                                <Ban className="h-3 w-3 text-violet-600 dark:text-violet-400 shrink-0" />
+                                <span>IA indisponível — revisar manualmente</span>
+                              </Badge>
+                            ) : item.aiVerdict === 'duvidoso' ? (
                               <Badge
                                 variant="outline"
                                 className="text-xs font-semibold bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500 shadow-sm animate-pulse flex items-center gap-1"
@@ -498,20 +587,76 @@ export default function Admin() {
                           <Button
                             variant="default"
                             size="sm"
-                            onClick={() => handleApprove(item.id)}
-                            disabled={isActionLoading && actionListingId === item.id}
+                            onClick={() => handleApprove(item.id, requiresManualReview(item))}
+                            disabled={
+                              (isActionLoading && actionListingId === item.id) ||
+                              (requiresManualReview(item) &&
+                                item.aiVerdict !== 'reprovado' &&
+                                !isManualReviewConfirmed(item))
+                            }
                             className="min-h-[44px] sm:min-h-[36px] gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white focus-visible:ring-2"
                             aria-label={`Aprovar anúncio ${item.name}`}
                           >
                             <CheckCircle className="h-4 w-4" />
                             <span>
-                              {isActionLoading && actionListingId === item.id
-                                ? 'Aprovando...'
-                                : 'Aprovar'}
+                              {requiresManualReview(item) && item.aiVerdict === 'reprovado'
+                                ? 'Aprovação bloqueada pela IA'
+                                : isActionLoading && actionListingId === item.id
+                                  ? 'Aprovando...'
+                                  : 'Aprovar'}
                             </span>
                           </Button>
                         </div>
                       </div>
+
+                      {/* Aviso de revisão manual obrigatória (duvidoso ou fallback sem chave IA) */}
+                      {item.aiVerdict === 'duvidoso' && (
+                        <div
+                          className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3 dark:border-amber-800 dark:bg-amber-950/40"
+                          id={`manual-review-${item.id}`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <ShieldAlert
+                              className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+                              aria-hidden="true"
+                            />
+                            <div className="space-y-1 flex-1">
+                              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                                {aiKeyMissing
+                                  ? 'IA indisponível — revisão manual necessária'
+                                  : 'Revisão manual obrigatória'}
+                              </p>
+                              <p className="text-sm text-amber-800 dark:text-amber-300">
+                                {aiKeyMissing
+                                  ? 'A chave da IA não está configurada. Este cadastro recebeu o veredito de fallback (duvidoso) e NÃO passou por análise automática. Confira os dados, as imagens e o motivo informado antes de aprovar.'
+                                  : 'Este cadastro foi sinalizado pela IA como duvidoso. Confira os dados, as imagens e o motivo informado antes de aprovar.'}
+                              </p>
+                              {(item.aiReason || item.rejectedReason) && (
+                                <p className="text-xs text-amber-900/80 dark:text-amber-200/80">
+                                  <span className="font-semibold">Motivo da IA:</span>{' '}
+                                  {item.aiReason || item.rejectedReason}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 pl-8">
+                            <input
+                              type="checkbox"
+                              id={`manual-review-check-${item.id}`}
+                              checked={isManualReviewConfirmed(item)}
+                              onChange={(e) => handleManualReviewToggle(item, e.target.checked)}
+                              aria-describedby={`manual-review-${item.id}`}
+                              className="h-5 w-5 min-h-[20px] min-w-[20px] rounded border-amber-400 text-emerald-600 focus-visible:ring-2 focus-visible:ring-amber-500 cursor-pointer accent-emerald-600"
+                            />
+                            <Label
+                              htmlFor={`manual-review-check-${item.id}`}
+                              className="text-sm font-medium text-amber-900 dark:text-amber-200 cursor-pointer"
+                            >
+                              Revisei manualmente este cadastro
+                            </Label>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Main Info Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2 border-t border-border/50">
@@ -998,7 +1143,8 @@ export default function Admin() {
               </CardTitle>
               <CardDescription>
                 Registro permanente e seguro de todas as ações executadas por administradores no
-                sistema.
+                sistema. Aprovações após revisão manual são registradas como
+                "aprovacao_revisao_manual" e marcadas com a flag manualReview=true.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1039,6 +1185,10 @@ export default function Admin() {
                       actionBadgeColor =
                         'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
                       actionLabel = 'Rejeitou Avaliação'
+                    } else if (log.action === 'aprovacao_revisao_manual') {
+                      actionBadgeColor =
+                        'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300'
+                      actionLabel = 'Aprovou Anúncio (Revisão Manual)'
                     }
 
                     return (
@@ -1354,12 +1504,22 @@ export default function Admin() {
                   type="button"
                   variant="default"
                   onClick={async () => {
-                    const success = await handleApprove(previewTarget.id)
+                    const success = await handleApprove(
+                      previewTarget.id,
+                      requiresManualReview(previewTarget),
+                    )
                     if (success) setPreviewModalOpen(false)
                   }}
+                  disabled={
+                    requiresManualReview(previewTarget) &&
+                    previewTarget.aiVerdict !== 'reprovado' &&
+                    !isManualReviewConfirmed(previewTarget)
+                  }
                   className="min-h-[44px] sm:min-h-[36px] bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
-                  Aprovar
+                  {requiresManualReview(previewTarget) && previewTarget.aiVerdict === 'reprovado'
+                    ? 'Aprovação bloqueada pela IA'
+                    : 'Aprovar'}
                 </Button>
               </>
             )}

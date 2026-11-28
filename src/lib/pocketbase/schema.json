@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-28T04:15:01.693Z",
+  "generatedAt": "2026-11-28T04:37:35.426Z",
   "collections": [
     {
       "name": "users",
@@ -205,6 +205,13 @@
           "required": false,
           "system": false,
           "selectValues": ["aprovado", "duvidoso", "reprovado"]
+        },
+        {
+          "name": "aiStatus",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["manual_review_required", "ia_indisponivel"]
         }
       ],
       "indexes": [
@@ -404,6 +411,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "manualReview",
+          "type": "bool",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

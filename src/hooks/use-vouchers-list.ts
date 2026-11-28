@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createElement } from 'react'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
+import { ToastAction } from '@/components/ui/toast'
 import type { VoucherItem } from '@/services/vouchers'
 import { getListingVouchers, validateVoucher } from '@/services/vouchers'
 
@@ -96,19 +98,23 @@ export function useUserVouchers(): UseUserVouchersResult {
           variant: 'destructive',
           title: 'Não foi possível atualizar o voucher',
           description: 'Tente novamente em instantes.',
-          action: {
-            label: 'Tentar novamente',
-            onClick: () => {
-              void markAsUsed(voucher)
+          action: createElement(
+            ToastAction,
+            {
+              altText: 'Tentar novamente',
+              onClick: () => {
+                void markAsUsed(voucher)
+              },
             },
-          },
+            'Tentar novamente',
+          ),
         })
         return false
       } finally {
         setMarkingId(null)
       }
     },
-    [markAsUsed, toast],
+    [toast],
   )
 
   const counts = {

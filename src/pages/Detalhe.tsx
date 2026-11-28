@@ -46,6 +46,7 @@ import {
 import { useListingDetail } from '@/hooks/use-listing-detail'
 import { useListingReviews } from '@/hooks/use-reviews'
 import { useListingClicks } from '@/hooks/use-listing-clicks'
+import { ListingVouchers } from '@/components/ListingVouchers'
 import pb from '@/lib/pocketbase/client'
 import { recordContactEvent, ContactChannel, ListingPhoto } from '@/services/listing-detail'
 import { trackListingClick, formatCounterValue } from '@/services/counters'
@@ -772,6 +773,12 @@ export default function Detalhe() {
                   </Card>
                 ))}
               </div>
+
+              {/* Vouchers ativos do anúncio (código, badge e marcar como utilizado p/ o dono) */}
+              <ListingVouchers
+                listingId={listing.id}
+                isOwner={isAuthenticated && listing.userId === pb.authStore.record?.id}
+              />
             </section>
           )}
 

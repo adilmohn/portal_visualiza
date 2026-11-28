@@ -3,6 +3,7 @@ import {
   getPendingListings,
   getApprovedListings,
   approveListing as apiApproveListing,
+  approveListingWithManualReview as apiApproveWithManualReview,
   rejectListing as apiRejectListing,
   deactivateListing as apiDeactivateListing,
   type AdminListingItem,
@@ -24,9 +25,10 @@ export interface UseAdminQueueResult {
   errorApproved: string | null
   refetchPending: () => Promise<void>
   refetchApproved: (page?: number, search?: string) => Promise<void>
-  handleApprove: (listingId: string) => Promise<boolean>
+  handleApprove: (listingId: string, manualReview?: boolean) => Promise<boolean>
   handleReject: (listingId: string, reason: string) => Promise<boolean>
   handleDeactivate: (listingId: string, reason?: string) => Promise<boolean>
+  setManualReviewReason: (listingId: string, reason: string) => void
 }
 
 export function useAdminQueue(): UseAdminQueueResult {
@@ -41,6 +43,7 @@ export function useAdminQueue(): UseAdminQueueResult {
   const [isLoadingApproved, setIsLoadingApproved] = useState(true)
   const [isActionLoading, setIsActionLoading] = useState(false)
   const [actionListingId, setActionListingId] = useState<string | null>(null)
+  const [manualReviewByListing, setManualReviewByListing] = useState<Record<string, boolean>>({})
 
   const [errorPending, setErrorPending] = useState<string | null>(null)
   const [errorApproved, setErrorApproved] = useState<string | null>(null)
@@ -105,28 +108,38 @@ export function useAdminQueue(): UseAdminQueueResult {
 
   // Action: Approve
   const handleApprove = useCallback(
-    async (listingId: string): Promise<boolean> => {
+    async (listingId: string, manualReview?: boolean): Promise<boolean> => {
       setIsActionLoading(true)
       setActionListingId(listingId)
       try {
-        await apiApproveListing(listingId)
+        if (manualReview) {
+          const reason = manualReviewByListing[listingId]
+          await apiApproveWithManualReview(listingId, reason)
+          setManualReviewByListing((prev) => {
+            const next = { ...prev }
+            delete next[listingId]
+            return next
+          })
+        } else {
+          await apiApproveListing(listingId)
+        }
         toast.success('Anúncio aprovado com sucesso!')
-        // Optimistically remove from pending
+        // Sai da fila com fade (remoção otimista + refetch aprovados)
         setPendingListings((prev) => prev.filter((item) => item.id !== listingId))
         fetchApproved(approvedPage)
         return true
       } catch (err: unknown) {
         console.error('Erro ao aprovar anúncio:', err)
-        const msg =
-          (err as { message?: string })?.message || 'Falha ao aprovar o anúncio. Tente novamente.'
-        toast.error(msg)
+        toast.error(
+          'Não foi possível aprovar o anúncio. O item permanece na fila e os botões foram reabilitados.',
+        )
         return false
       } finally {
         setIsActionLoading(false)
         setActionListingId(null)
       }
     },
-    [approvedPage, fetchApproved],
+    [approvedPage, fetchApproved, manualReviewByListing],
   )
 
   // Action: Reject with reason
@@ -197,5 +210,6 @@ export function useAdminQueue(): UseAdminQueueResult {
     handleApprove,
     handleReject,
     handleDeactivate,
+    setManualReviewReason,
   }
 }
