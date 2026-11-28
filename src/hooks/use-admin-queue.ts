@@ -44,6 +44,13 @@ export function useAdminQueue(): UseAdminQueueResult {
   const [isActionLoading, setIsActionLoading] = useState(false)
   const [actionListingId, setActionListingId] = useState<string | null>(null)
   const [manualReviewByListing, setManualReviewByListing] = useState<Record<string, boolean>>({})
+  const [manualReviewReasonByListing, setManualReviewReasonByListing] = useState<
+    Record<string, string>
+  >({})
+
+  const setManualReviewReason = useCallback((listingId: string, reason: string) => {
+    setManualReviewReasonByListing((prev) => ({ ...prev, [listingId]: reason }))
+  }, [])
 
   const [errorPending, setErrorPending] = useState<string | null>(null)
   const [errorApproved, setErrorApproved] = useState<string | null>(null)
@@ -113,8 +120,15 @@ export function useAdminQueue(): UseAdminQueueResult {
       setActionListingId(listingId)
       try {
         if (manualReview) {
-          const reason = manualReviewByListing[listingId]
+          const reason =
+            manualReviewReasonByListing[listingId] ??
+            'Aprovado com revisão manual obrigatória (IA indisponível ou duvidoso).'
           await apiApproveWithManualReview(listingId, reason)
+          setManualReviewReasonByListing((prev) => {
+            const next = { ...prev }
+            delete next[listingId]
+            return next
+          })
           setManualReviewByListing((prev) => {
             const next = { ...prev }
             delete next[listingId]
@@ -139,7 +153,7 @@ export function useAdminQueue(): UseAdminQueueResult {
         setActionListingId(null)
       }
     },
-    [approvedPage, fetchApproved, manualReviewByListing],
+    [approvedPage, fetchApproved, manualReviewReasonByListing],
   )
 
   // Action: Reject with reason
