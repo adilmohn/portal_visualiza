@@ -31,6 +31,10 @@ export interface VoucherItem {
       title: string
       description: string
     }
+    listingId?: {
+      id: string
+      name: string
+    }
   }
 }
 
